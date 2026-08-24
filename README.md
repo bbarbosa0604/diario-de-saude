@@ -10,9 +10,20 @@ Diário pessoal de saúde gastrointestinal, com foco em registros rápidos e em 
 - categorias opcionais por evento (por exemplo, Almoço, Cólica e Evacuação), permitindo vários registros no mesmo dia;
 - anexo de foto de evacuação com pré-visualização e confirmação da sugestão de Bristol;
 - esquema Prisma preparado para PostgreSQL, com isolamento dos eventos por `userId`;
+- integração opcional com Supabase Auth, PostgreSQL/RLS e Storage para eventos e fotos;
 - entidades de refeições, alimentos/tags, sintomas e evacuações prontas para o próximo passo.
 
 Os registros da tela são demonstrativos e ficam apenas na sessão do navegador nesta entrega. A persistência, autenticação, edição/exclusão e a chamada real ao modelo de visão entram quando o PostgreSQL e o provedor de IA estiverem configurados.
+
+## Ativar persistência no Supabase
+
+1. Crie um projeto no Supabase.
+2. No SQL Editor, execute [`supabase/schema.sql`](supabase/schema.sql). Ele cria a tabela `health_events`, políticas RLS por usuário e o bucket privado de fotos.
+3. Copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` com os valores do painel do Supabase. Use apenas a chave publicável/anon no navegador; nunca coloque a `service_role` no frontend.
+4. No projeto Vercel, adicione as mesmas duas variáveis em **Settings → Environment Variables** e faça um novo deploy.
+5. A Home exibirá login/cadastro. Depois de entrar, os eventos e fotos serão salvos no Supabase e protegidos por RLS.
+
+O app continua funcionando em modo demonstrativo quando as variáveis do Supabase não estão definidas.
 
 ## Desenvolvimento
 

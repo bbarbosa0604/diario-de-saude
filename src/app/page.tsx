@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
 type EventKind = "meal" | "symptom" | "bowel" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
 
@@ -14,6 +16,8 @@ type TimelineEvent = {
   badge?: string;
   tags?: string[];
   foods?: string[];
+  photoFile?: File;
+  photoPath?: string;
 };
 
 const initialEvents: TimelineEvent[] = [
@@ -68,7 +72,11 @@ function timeNow() {
 }
 
 export default function Home() {
-  const [events, setEvents] = useState(initialEvents);
+  const supabase = getSupabaseBrowserClient();
+  const [events, setEvents] = useState<TimelineEvent[]>(initialEvents);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured());
+  const [authError, setAuthError] = useState<string | null>(null);
   const [activeForm, setActiveForm] = useState<EventKind | null>(null);
   const [showEventPicker, setShowEventPicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState("2026-08-10");
@@ -77,6 +85,39 @@ export default function Home() {
 
   const selectedDateLabel = selectedDate === "2026-08-10" ? "Hoje, 10 de agosto" : new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(new Date(`${selectedDate}T12:00:00`));
   const dayEvents = events.filter((event) => event.date === selectedDate);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const client = supabase;
+    let mounted = true;
+    async function load() {
+      const { data } = await client.auth.getUser();
+      if (!mounted) return;
+      setUser(data.user ?? null);
+      setAuthLoading(false);
+      if (data.user) {
+        const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,foods,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
+        if (error) setAuthError(error.message);
+        else if (rows) setEvents(rows.map(mapDatabaseEvent));
+      } else {
+        setEvents([]);
+      }
+    }
+    void load();
+    const { data: authSubscription } = client.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+      if (session?.user) {
+        void client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,foods,photo_path").eq("user_id", session.user.id).order("event_time", { ascending: true }).then(({ data: rows, error }) => {
+          if (error) setAuthError(error.message);
+          else if (rows) setEvents(rows.map(mapDatabaseEvent));
+        });
+      } else {
+        setEvents([]);
+      }
+    });
+    return () => { mounted = false; authSubscription.subscription.unsubscribe(); };
+  }, [supabase]);
 
   const summary = useMemo(
     () => ({
@@ -87,8 +128,31 @@ export default function Home() {
     [events],
   );
 
-  function addEvent(event: TimelineEvent) {
-    setEvents((current) => [...current, { ...event, date: selectedDate }].sort((a, b) => a.time.localeCompare(b.time)));
+  async function addEvent(event: TimelineEvent) {
+    const eventWithDate = { ...event, date: selectedDate };
+    setEvents((current) => [...current, eventWithDate].sort((a, b) => a.time.localeCompare(b.time)));
+    if (supabase && user) {
+      let photoPath: string | null = null;
+      if (eventWithDate.photoFile) {
+        photoPath = `${user.id}/${eventWithDate.id}-${eventWithDate.photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+        const { error: uploadError } = await supabase.storage.from("health-event-photos").upload(photoPath, eventWithDate.photoFile, { upsert: false });
+        if (uploadError) setAuthError(`Registro criado, mas a foto não foi enviada: ${uploadError.message}`);
+      }
+      const { error } = await supabase.from("health_events").insert({
+        id: eventWithDate.id,
+        user_id: user.id,
+        event_date: selectedDate,
+        event_kind: eventWithDate.kind,
+        event_time: eventWithDate.time,
+        title: eventWithDate.title,
+        detail: eventWithDate.detail,
+        badge: eventWithDate.badge ?? null,
+        tags: eventWithDate.tags ?? [],
+        foods: eventWithDate.foods ?? [],
+        photo_path: photoPath,
+      });
+      if (error) setAuthError(`Não foi possível salvar: ${error.message}`);
+    }
     setActiveForm(null);
   }
 
@@ -101,6 +165,8 @@ export default function Home() {
         </div>
         <div className="grid h-11 w-11 place-items-center rounded-full bg-[#e6f1e9] text-xl">🌿</div>
       </header>
+
+      {isSupabaseConfigured() && <AuthPanel user={user} loading={authLoading} error={authError} onUser={setUser} onError={setAuthError} supabase={supabase} />}
 
       <section className="mt-7 rounded-[28px] bg-[#e9f3eb] p-5 shadow-[0_8px_30px_rgba(38,81,59,0.08)]">
         <div className="flex items-center justify-between">
@@ -202,6 +268,30 @@ function gutSummary(events: TimelineEvent[]) {
   return `Foram registradas ${bowel} ${bowel === 1 ? "evacuação" : "evacuações"} hoje.`;
 }
 
+function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; foods: string[] | null; photo_path?: string | null }): TimelineEvent {
+  return { id: row.id, date: row.event_date, kind: row.event_kind, time: row.event_time.slice(0, 5), title: row.title, detail: row.detail, badge: row.badge ?? undefined, tags: row.tags ?? [], foods: row.foods ?? [], photoPath: row.photo_path ?? undefined };
+}
+
+function AuthPanel({ user, loading, error, onUser, onError, supabase }: { user: User | null; loading: boolean; error: string | null; onUser: (user: User | null) => void; onError: (message: string | null) => void; supabase: ReturnType<typeof getSupabaseBrowserClient> }) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!supabase) return null;
+  const client = supabase;
+  if (loading) return <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Conectando ao seu diário seguro…</div>;
+  if (user) return <div className="mt-5 flex items-center justify-between rounded-2xl border border-[#dce5dd] bg-white px-4 py-3"><div><p className="text-xs text-[#698076]">Diário sincronizado</p><p className="mt-0.5 max-w-[220px] truncate text-sm font-semibold">{user.email}</p></div><button type="button" onClick={async () => { await client.auth.signOut(); onUser(null); }} className="text-xs font-semibold text-[#39734f]">Sair</button></div>;
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); onError(null);
+    const result = mode === "signin" ? await client.auth.signInWithPassword({ email, password }) : await client.auth.signUp({ email, password });
+    if (result.error) onError(result.error.message);
+    else if (result.data.user) onUser(result.data.user);
+    if (mode === "signup" && !result.error && !result.data.session) onError("Cadastro criado. Verifique seu e-mail para confirmar o acesso.");
+    setBusy(false);
+  }
+  return <section className="mt-5 rounded-2xl border border-[#dce5dd] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#527063]">Diário privado</p><h2 className="mt-1 text-lg font-semibold">{mode === "signin" ? "Entre para sincronizar seus registros" : "Crie sua conta"}</h2><form onSubmit={submit} className="mt-3 space-y-2"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-[#dce5dd] px-3 py-2.5 text-sm" /><input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Senha (mínimo 6 caracteres)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-2.5 text-sm" /><button disabled={busy} className="w-full rounded-xl bg-[#1e6341] py-3 text-sm font-semibold text-white">{busy ? "Aguarde…" : mode === "signin" ? "Entrar e sincronizar" : "Criar conta"}</button></form>{error && <p className="mt-2 text-xs text-[#a34a3d]">{error}</p>}<button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); onError(null); }} className="mt-3 text-xs font-semibold text-[#39734f]">{mode === "signin" ? "Ainda não tenho conta" : "Já tenho uma conta"}</button></section>;
+}
+
 function Insights({ events }: { events: TimelineEvent[] }) {
   const insights = buildInsights(events);
   return <section className="mt-8 rounded-[26px] border border-[#e6ebe5] bg-white p-5 shadow-[0_5px_16px_rgba(32,62,45,0.04)]">
@@ -269,6 +359,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
   const title = `Registrar ${eventOptions.find((option) => option.kind === kind)?.label.toLowerCase() || "evento"}`;
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const [aiBristol, setAiBristol] = useState<string | null>(null);
 
@@ -294,9 +385,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
     if (!value) return;
     const item: TimelineEvent =
       kind === "meal"
-        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, foods }
+        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, foods, photoFile: photoFile ?? undefined }
         : kind === "bowel"
-          ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Bristol ${value}${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: `B${value}`, tags: photoName ? ["foto", "classificação pendente"] : undefined }
+          ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Bristol ${value}${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: `B${value}`, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
           : kind === "symptom"
             ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity ? `Intensidade ${intensity}/10` : ""}${details ? `${intensity ? " · " : ""}${details}` : ""}`, badge: intensity ? `${intensity}/10` : undefined }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
@@ -348,6 +439,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
               const file = event.target.files?.[0];
               if (!file) return;
               setPhotoName(file.name);
+              setPhotoFile(file);
               setPhotoPreview(URL.createObjectURL(file));
               setAiStatus(null);
               setAiBristol(null);
