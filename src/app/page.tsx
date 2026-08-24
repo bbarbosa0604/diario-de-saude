@@ -81,6 +81,7 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(configured);
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeForm, setActiveForm] = useState<EventKind | null>(null);
+  const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
   const [showEventPicker, setShowEventPicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState("2026-08-10");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -201,6 +202,15 @@ export default function Home() {
     setEvents((current) => current.filter((item) => item.id !== event.id));
   }
 
+  async function updateEvent(event: TimelineEvent) {
+    if (supabase && user) {
+      const { error } = await supabase.from("health_events").update({ event_time: event.time, title: event.title, detail: event.detail }).eq("id", event.id).eq("user_id", user.id);
+      if (error) { setAuthError(`Não foi possível editar: ${error.message}`); return; }
+    }
+    setEvents((current) => current.map((item) => item.id === event.id ? event : item).sort((a, b) => a.time.localeCompare(b.time)));
+    setEditingEvent(null);
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-md bg-[#fcfcf9] px-5 pb-28 text-[#18342b]">
       <header className="flex items-center justify-between pt-8">
@@ -276,7 +286,7 @@ export default function Home() {
         </div>
         <div className="space-y-3">
           {dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).map((event) => (
-            <TimelineCard event={event} key={event.id} onDelete={() => void removeEvent(event)} />
+            <TimelineCard event={event} key={event.id} onEdit={() => setEditingEvent(event)} onDelete={() => void removeEvent(event)} />
           ))}
           {dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).length === 0 && <div className="rounded-2xl border border-dashed border-[#cbd9ce] p-5 text-center text-sm text-[#698076]">Nenhum registro nesta categoria para este dia.</div>}
         </div>
@@ -291,6 +301,7 @@ export default function Home() {
 
       {showEventPicker && <EventPicker onClose={() => setShowEventPicker(false)} onSelect={(kind) => { setShowEventPicker(false); setActiveForm(kind); }} />}
       {activeForm && <QuickForm kind={activeForm} onClose={() => setActiveForm(null)} onSave={addEvent} />}
+      {editingEvent && <EditEventForm event={editingEvent} onClose={() => setEditingEvent(null)} onSave={(event) => void updateEvent(event)} />}
     </main>
   );
 }
@@ -348,7 +359,7 @@ function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: Eve
   return { id: row.id, date: row.event_date, kind: row.event_kind, time: row.event_time.slice(0, 5), title: row.title, detail: row.detail, badge: row.badge ?? undefined, tags: row.tags ?? [], photoPath: row.photo_path ?? undefined };
 }
 
-function TimelineCard({ event, onDelete }: { event: TimelineEvent; onDelete: () => void }) {
+function TimelineCard({ event, onEdit, onDelete }: { event: TimelineEvent; onEdit: () => void; onDelete: () => void }) {
   const icon = eventOptions.find((option) => option.kind === event.kind)?.icon || "📝";
   const color = event.kind === "meal" ? "bg-[#e9f3eb]" : event.kind === "bowel" ? "bg-[#fff2d9]" : "bg-[#fae8e5]";
   return (
@@ -358,7 +369,7 @@ function TimelineCard({ event, onDelete }: { event: TimelineEvent; onDelete: () 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold">{event.title}</h3>
-          <div className="flex items-center gap-2">{event.badge && <span className="rounded-full bg-[#f2f5f1] px-2 py-1 text-xs font-semibold text-[#527063]">{event.badge}</span>}<button type="button" onClick={onDelete} aria-label={`Excluir ${event.title}`} className="rounded-full px-2 py-1 text-sm text-[#a34a3d] transition hover:bg-[#fae8e5]">Excluir</button></div>
+          <div className="flex items-center gap-1">{event.badge && <span className="rounded-full bg-[#f2f5f1] px-2 py-1 text-xs font-semibold text-[#527063]">{event.badge}</span>}<button type="button" onClick={onEdit} aria-label={`Editar ${event.title}`} className="rounded-full px-2 py-1 text-sm font-semibold text-[#39734f] transition hover:bg-[#e9f3eb]">Editar</button><button type="button" onClick={onDelete} aria-label={`Excluir ${event.title}`} className="rounded-full px-2 py-1 text-sm text-[#a34a3d] transition hover:bg-[#fae8e5]">Excluir</button></div>
         </div>
         <p className="mt-1 text-sm leading-snug text-[#698076]">{event.detail}</p>
         {event.tags && event.tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">
@@ -498,4 +509,20 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
       </form>
     </div>
   );
+}
+
+function EditEventForm({ event, onClose, onSave }: { event: TimelineEvent; onClose: () => void; onSave: (event: TimelineEvent) => void }) {
+  const [time, setTime] = useState(event.time);
+  const [title, setTitle] = useState(event.title);
+  const [detail, setDetail] = useState(event.detail);
+  return <div className="fixed inset-0 z-20 flex items-end bg-[#18342b]/25" role="dialog" aria-modal="true" aria-label="Editar registro">
+    <form onSubmit={(formEvent) => { formEvent.preventDefault(); onSave({ ...event, time, title: title.trim() || event.title, detail: detail.trim() }); }} className="w-full rounded-t-[30px] bg-[#fcfcf9] px-5 pb-8 pt-4 shadow-2xl">
+      <div className="mx-auto h-1.5 w-10 rounded-full bg-[#d3ddd5]" />
+      <div className="mt-5 flex items-center justify-between"><div><p className="text-sm text-[#698076]">Editar registro</p><h2 className="text-xl font-semibold">{event.title}</h2></div><button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-semibold text-[#527063]">Cancelar</button></div>
+      <label className="mt-5 block text-sm font-semibold">Horário<input required type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+      <label className="mt-4 block text-sm font-semibold">Título<input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+      <label className="mt-4 block text-sm font-semibold">Detalhes<textarea value={detail} onChange={(e) => setDetail(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+      <button className="mt-6 w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">Salvar edição</button>
+    </form>
+  </div>;
 }
