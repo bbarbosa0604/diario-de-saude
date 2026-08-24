@@ -32,7 +32,7 @@ export default function LoginPage() {
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim() } } });
     if (result.error) setError(result.error.message);
-    else if (mode === "signup" && !result.data.session) router.replace(`/verify?email=${encodeURIComponent(email)}`);
+    else if (mode === "signup" && !result.data.session) setError("O cadastro foi criado, mas o Supabase ainda exige confirmação de e-mail. Desative Email Confirmations nas configurações do Supabase para liberar o acesso imediato.");
     else router.replace("/");
     setBusy(false);
   }
