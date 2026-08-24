@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
 type EventKind = "meal" | "symptom" | "bowel" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
@@ -163,7 +164,7 @@ export default function Home() {
           <p className="text-sm font-medium text-[#698076]">Meuintestino</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Olá, Bruno.</h1>
         </div>
-        <div className="grid h-11 w-11 place-items-center rounded-full bg-[#e6f1e9] text-xl">🌿</div>
+        <Link href="/profile" aria-label="Minha conta" className="grid h-11 w-11 place-items-center rounded-full bg-[#e6f1e9] text-xl transition active:scale-95">🌿</Link>
       </header>
 
       {isSupabaseConfigured() && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Verificando sua sessão segura…</div>}
