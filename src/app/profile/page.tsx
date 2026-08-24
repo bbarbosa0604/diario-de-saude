@@ -14,6 +14,10 @@ export default function ProfilePage() {
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +62,20 @@ export default function ProfilePage() {
     router.replace("/login");
   }
 
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !user?.email) return;
+    setPasswordBusy(true); setError(null); setMessage(null);
+    if (newPassword.length < 8) { setError("A nova senha deve ter pelo menos 8 caracteres."); setPasswordBusy(false); return; }
+    if (newPassword !== confirmPassword) { setError("A confirmação da nova senha não confere."); setPasswordBusy(false); return; }
+    const { error: currentError } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+    if (currentError) { setError("A senha atual está incorreta."); setPasswordBusy(false); return; }
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateError) setError(updateError.message);
+    else { setMessage("Senha alterada com sucesso."); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }
+    setPasswordBusy(false);
+  }
+
   if (!isSupabaseConfigured()) return <main className="flex min-h-screen items-center justify-center bg-[#fcfcf9] px-5 text-[#18342b]"><section className="max-w-md rounded-3xl bg-white p-6 text-center shadow-lg"><h1 className="text-xl font-semibold">Meuintestino</h1><p className="mt-3 text-sm text-[#698076]">Configure o Supabase para editar os dados da conta.</p></section></main>;
   if (busy && !user) return <main className="grid min-h-screen place-items-center bg-[#fcfcf9] text-sm text-[#698076]">Carregando sua conta…</main>;
 
@@ -73,5 +91,6 @@ export default function ProfilePage() {
       {error && <p className="rounded-xl bg-[#fae8e5] p-3 text-sm text-[#9b4438]">{error}</p>}
     </form>
     <button type="button" onClick={signOut} className="mt-8 w-full rounded-2xl border border-[#efc9c2] bg-white py-4 font-semibold text-[#a34a3d]">Sair da conta</button>
+    <section className="mt-6 rounded-3xl border border-[#e6ebe5] bg-white p-5"><h2 className="text-lg font-semibold">Trocar senha</h2><p className="mt-1 text-sm leading-relaxed text-[#698076]">Por segurança, confirme sua senha atual antes de definir uma nova.</p><form onSubmit={changePassword} className="mt-4 space-y-3"><input required type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder="Senha atual" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><input required minLength={8} type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Nova senha (mínimo 8 caracteres)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><input required minLength={8} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirme a nova senha" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><button disabled={passwordBusy} className="w-full rounded-2xl border border-[#b9cfc0] bg-[#f3f8f3] py-3 font-semibold text-[#39734f]">{passwordBusy ? "Atualizando…" : "Atualizar senha"}</button></form></section>
   </main>;
 }
