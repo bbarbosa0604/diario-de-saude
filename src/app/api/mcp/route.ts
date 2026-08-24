@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     if (!validDate(args.date)) return errorRpc(id, -32602, "Informe date no formato YYYY-MM-DD.");
     const { data, error } = await auth.client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", auth.user.id).eq("event_date", args.date).order("event_time", { ascending: true });
     if (error) return errorRpc(id, -32000, "Não foi possível consultar os eventos.");
-    return jsonRpc(id, { content: [{ type: "text", text: JSON.stringify({ userId: auth.user.id, date: args.date, events: data ?? [] }, null, 2) }] });
+    return jsonRpc(id, { content: [{ type: "text", text: JSON.stringify({ date: args.date, events: data ?? [] }, null, 2) }] });
   }
   if (name === "get_daily_summary") {
     if (!validDate(args.date)) return errorRpc(id, -32602, "Informe date no formato YYYY-MM-DD.");
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     if (error) return errorRpc(id, -32000, "Não foi possível gerar o relatório.");
     const events = data ?? [];
     const byKind = Object.fromEntries([...new Set(events.map((event) => event.event_kind))].map((kind) => [kind, events.filter((event) => event.event_kind === kind).length]));
-    return jsonRpc(id, textResult({ userId: auth.user.id, startDate: args.startDate, endDate: args.endDate, totalEvents: events.length, byKind, events }));
+    return jsonRpc(id, textResult({ startDate: args.startDate, endDate: args.endDate, totalEvents: events.length, byKind, events }));
   }
   return errorRpc(id, -32602, "Ferramenta MCP não encontrada.");
 }
