@@ -102,8 +102,16 @@ export default function ProfilePage() {
     setDocumentsBusy(true); setError(null); setMessage(null);
     const safeName = documentFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage.from("medical-exams").upload(path, documentFile, { upsert: false, contentType: documentFile.type || "application/octet-stream" });
-    if (uploadError) { setError(`Não foi possível enviar o exame: ${uploadError.message}`); setDocumentsBusy(false); return; }
+    const { error: uploadError } = await supabase.storage.from("medical-exams").upload(path, documentFile, { upsert: false, cacheControl: "3600", contentType: "application/pdf" });
+    if (uploadError) {
+      const details = uploadError.message.toLowerCase();
+      const storageMessage = details.includes("bucket") || details.includes("not found")
+        ? "O armazenamento de exames ainda não está configurado. Execute no Supabase o bloco do bucket medical-exams em supabase/schema.sql."
+        : details.includes("row-level security") || details.includes("policy")
+          ? "O Supabase bloqueou o envio. Execute novamente as políticas do bucket medical-exams em supabase/schema.sql."
+          : `Não foi possível enviar o exame (${uploadError.message}). Verifique se o PDF tem até 10 MB.`;
+      setError(storageMessage); setDocumentsBusy(false); return;
+    }
     const { data: row, error: insertError } = await supabase.from("medical_documents").insert({ user_id: user.id, name: documentFile.name, exam_type: null, exam_date: documentDate || null, storage_path: path, mime_type: documentFile.type, size_bytes: documentFile.size }).select("id,name,exam_type,exam_date,storage_path,mime_type,size_bytes,created_at").single();
     if (insertError || !row) { await supabase.storage.from("medical-exams").remove([path]); setError(`Não foi possível salvar o exame: ${insertError?.message || "erro desconhecido"}`); setDocumentsBusy(false); return; }
     setDocuments((current) => [row as MedicalDocument, ...current]); setDocumentDate(""); setDocumentFile(null); setMessage("Exame anexado com segurança."); setDocumentsBusy(false);
