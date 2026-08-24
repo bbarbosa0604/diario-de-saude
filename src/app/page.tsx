@@ -395,6 +395,18 @@ function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: Eve
 function TimelineCard({ event, onEdit, onDelete }: { event: TimelineEvent; onEdit: () => void; onDelete: () => void }) {
   const icon = eventOptions.find((option) => option.kind === event.kind)?.icon || "📝";
   const color = event.kind === "meal" ? "bg-[#e9f3eb]" : event.kind === "bowel" ? "bg-[#fff2d9]" : "bg-[#fae8e5]";
+  const supabase = getSupabaseBrowserClient();
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!supabase || !event.photoPath) return;
+    let active = true;
+    void supabase.storage.from("health-event-photos").createSignedUrl(event.photoPath, 3600).then(({ data }) => {
+      if (active && data?.signedUrl) setPhotoUrl(data.signedUrl);
+    });
+    return () => { active = false; };
+  }, [event.photoPath, supabase]);
+
   return (
     <article className="flex gap-3 rounded-2xl border border-[#e8ece8] bg-white p-4 shadow-[0_5px_16px_rgba(32,62,45,0.04)]">
       <time className="w-10 pt-1 text-sm font-semibold text-[#527063]">{event.time}</time>
@@ -405,6 +417,7 @@ function TimelineCard({ event, onEdit, onDelete }: { event: TimelineEvent; onEdi
           <div className="flex items-center gap-1">{event.badge && <span className="rounded-full bg-[#f2f5f1] px-2 py-1 text-xs font-semibold text-[#527063]">{event.badge}</span>}<button type="button" onClick={onEdit} aria-label={`Editar ${event.title}`} className="rounded-full px-2 py-1 text-sm font-semibold text-[#39734f] transition hover:bg-[#e9f3eb]">Editar</button><button type="button" onClick={onDelete} aria-label={`Excluir ${event.title}`} className="rounded-full px-2 py-1 text-sm text-[#a34a3d] transition hover:bg-[#fae8e5]">Excluir</button></div>
         </div>
         <p className="mt-1 text-sm leading-snug text-[#698076]">{event.detail}</p>
+        {photoUrl && <img src={photoUrl} alt={`Foto de ${event.title}`} className="mt-3 h-28 w-full rounded-2xl object-cover" />}
         {event.tags && event.tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">
           {event.tags.map((tag) => <span className="rounded-full bg-[#eef5ef] px-2 py-1 text-[11px] font-semibold text-[#39734f]" key={tag}>#{tag}</span>)}
         </div>}
