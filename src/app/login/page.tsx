@@ -8,6 +8,7 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export default function LoginPage() {
     setMessage(null);
     const result = mode === "signin"
       ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim() } } });
     if (result.error) setError(result.error.message);
     else if (mode === "signup" && !result.data.session) router.replace(`/verify?email=${encodeURIComponent(email)}`);
     else router.replace("/");
@@ -43,6 +44,7 @@ export default function LoginPage() {
       <h1 className="mt-1 text-2xl font-semibold">{mode === "signin" ? "Entre no seu diário" : "Crie seu acesso"}</h1>
       <p className="mt-2 text-sm leading-relaxed text-[#698076]">Entenda seus padrões com seus próprios registros. Seus dados ficam associados à sua conta e protegidos por usuário.</p>
       {!isSupabaseConfigured() ? <p className="mt-5 rounded-2xl bg-[#fff4db] p-4 text-sm leading-relaxed text-[#765d2c]">O Supabase ainda não está configurado neste ambiente. Adicione as variáveis públicas no `.env.local` para ativar o login.</p> : <form onSubmit={submit} className="mt-6 space-y-3">
+        {mode === "signup" && <label className="block text-sm font-semibold">Nome<input required type="text" value={name} onChange={(event) => setName(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="Como você gostaria de ser chamado?" /></label>}
         <label className="block text-sm font-semibold">E-mail<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="seu@email.com" /></label>
         <label className="block text-sm font-semibold">Senha<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="Mínimo de 6 caracteres" /></label>
         <button disabled={busy} className="w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">{busy ? "Aguarde…" : mode === "signin" ? "Entrar" : "Criar conta"}</button>
