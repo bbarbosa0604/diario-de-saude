@@ -109,7 +109,7 @@ export default function ProfilePage() {
         ? "O armazenamento de exames ainda não está configurado. Execute no Supabase o bloco do bucket medical-exams em supabase/schema.sql."
         : details.includes("row-level security") || details.includes("policy")
           ? "O Supabase bloqueou o envio. Execute novamente as políticas do bucket medical-exams em supabase/schema.sql."
-          : `Não foi possível enviar o exame (${uploadError.message}). Verifique se o PDF tem até 10 MB.`;
+          : `Não foi possível enviar o exame (${uploadError.message}${uploadError.statusCode ? ` · código ${uploadError.statusCode}` : ""}). Verifique se o PDF tem até 10 MB.`;
       setError(storageMessage); setDocumentsBusy(false); return;
     }
     const { data: row, error: insertError } = await supabase.from("medical_documents").insert({ user_id: user.id, name: documentFile.name, exam_type: null, exam_date: documentDate || null, storage_path: path, mime_type: documentFile.type, size_bytes: documentFile.size }).select("id,name,exam_type,exam_date,storage_path,mime_type,size_bytes,created_at").single();
