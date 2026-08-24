@@ -90,6 +90,7 @@ export default function Home() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiLocked, setAiLocked] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   const selectedDateLabel = selectedDate === "2026-08-10" ? "Hoje, 10 de agosto" : new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(new Date(`${selectedDate}T12:00:00`));
   const dayEvents = events.filter((event) => event.date === selectedDate);
@@ -119,6 +120,30 @@ export default function Home() {
     } finally {
       setAiBusy(false);
     }
+  }
+
+  async function exportDayData() {
+    const history = String(user?.user_metadata?.intestinal_history || "").trim();
+    const lines = [
+      "Meuintestino — REGISTRO DO DIA",
+      `Data: ${selectedDate}`,
+      "",
+      "HISTÓRICO INTESTINAL DO USUÁRIO:",
+      history || "Não informado.",
+      "",
+      "EVENTOS REGISTRADOS:",
+      ...(dayEvents.length ? dayEvents.sort((a, b) => a.time.localeCompare(b.time)).map((event) => `- ${event.time} | ${event.kind} | ${event.title} | ${event.detail}${event.tags?.length ? ` | tags: ${event.tags.join(", ")}` : ""}`) : ["Nenhum evento registrado."]),
+      "",
+      "Observação: estes dados são registros pessoais e não representam um diagnóstico médico.",
+    ];
+    const content = lines.join("\n");
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = `meuintestino-${selectedDate}.txt`; link.click();
+    URL.revokeObjectURL(url);
+    try { await navigator.clipboard.writeText(content); setExportMessage("Arquivo baixado e dados copiados. Agora você pode colar em outra IA."); }
+    catch { setExportMessage("Arquivo baixado. Abra-o para copiar os dados para outra IA."); }
   }
 
   useEffect(() => {
@@ -255,11 +280,12 @@ export default function Home() {
           <div>
             <p className="font-semibold">Resumo inteligente do dia</p>
             <p className="mt-0.5 text-sm leading-snug text-[#698076]">{gutSummary(dayEvents)}</p>
-            <button type="button" onClick={() => void evaluateDay()} disabled={aiBusy || aiLocked} className="mt-3 rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Recriando análise…" : aiLocked ? "Avaliação realizada hoje" : "✦ Avaliar meu dia"}</button>
+            <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void evaluateDay()} disabled={aiBusy || aiLocked} className="rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Recriando análise…" : aiLocked ? "Avaliação realizada hoje" : "✦ Avaliar meu dia"}</button><button type="button" onClick={() => void exportDayData()} className="rounded-full border border-[#b9cfc0] bg-white px-4 py-2 text-xs font-semibold text-[#39734f]">⇩ Exportar dados</button></div>
           </div>
         </div>
         {aiBusy && <p className="mt-3 rounded-xl bg-white/80 p-3 text-sm text-[#527063]">Recriando a análise com todos os registros deste dia e seu histórico intestinal…</p>}
         {aiLocked && !aiBusy && <p className="mt-3 text-xs text-[#819189]">A avaliação deste dia já foi realizada. Uma nova avaliação estará disponível em outro dia.</p>}
+        {exportMessage && <p className="mt-3 rounded-xl bg-white/80 p-3 text-xs text-[#527063]">{exportMessage}</p>}
         {aiError && <p className="mt-3 rounded-xl bg-[#fae8e5] p-3 text-sm text-[#9b4438]">{aiError}</p>}
         {aiSummary && <div className="mt-3 rounded-2xl border border-[#cfe0d1] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#39734f]">Análise dos seus registros</p><p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-[#527063]">{aiSummary}</p><p className="mt-3 text-xs leading-relaxed text-[#819189]">Associação observada nos seus registros. Isso não significa necessariamente relação de causa e efeito.</p></div>}
         {showDatePicker && <div className="mt-3 rounded-2xl border border-[#dce5dd] bg-white p-4 shadow-lg">
