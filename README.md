@@ -25,6 +25,10 @@ Os registros da tela são demonstrativos e ficam apenas na sessão do navegador 
 
 Com o Supabase configurado, a rota `/` exige uma sessão válida e redireciona automaticamente usuários não autenticados para `/login`. Após login ou criação da conta, o usuário retorna para a Home.
 
+## Código de validação por e-mail
+
+O fluxo de cadastro direciona o usuário para `/verify` e valida o código de 6 dígitos com `supabase.auth.verifyOtp`. No Supabase Dashboard, em **Authentication → Email Templates → Confirm signup**, copie o conteúdo de [`supabase/email-templates/confirm-signup.html`](supabase/email-templates/confirm-signup.html) e defina o remetente como `Meuintestino`. O template usa `{{ .Token }}`, variável oficial do Supabase para o OTP.
+
 O app continua funcionando em modo demonstrativo quando as variáveis do Supabase não estão definidas.
 
 A análise de alimentos e insights estatísticos da Fase 2 foi removida da interface atual. As tags simples continuam disponíveis para organização manual do histórico.

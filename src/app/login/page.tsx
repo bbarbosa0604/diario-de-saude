@@ -31,7 +31,7 @@ export default function LoginPage() {
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
     if (result.error) setError(result.error.message);
-    else if (mode === "signup" && !result.data.session) setMessage("Cadastro criado. Verifique seu e-mail antes de entrar.");
+    else if (mode === "signup" && !result.data.session) router.replace(`/verify?email=${encodeURIComponent(email)}`);
     else router.replace("/");
     setBusy(false);
   }
