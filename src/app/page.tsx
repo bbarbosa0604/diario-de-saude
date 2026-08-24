@@ -402,14 +402,13 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         <label className="mt-5 block text-sm font-semibold">Horário
           <input name="time" type="time" defaultValue={timeNow()} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>
-        <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
+        {kind !== "symptom" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
           <select name="category" defaultValue="" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">
             <option value="">Sem categoria</option>
             {kind === "meal" && ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"].map((category) => <option key={category}>{category}</option>)}
-            {kind === "symptom" && ["Cólica", "Gases", "Náusea", "Refluxo", "Dor abdominal"].map((category) => <option key={category}>{category}</option>)}
             {kind === "bowel" && ["Evacuação", "Evacuação urgente"].map((category) => <option key={category}>{category}</option>)}
           </select>
-        </label>
+        </label>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <textarea name="value" required placeholder="Ex.: arroz, feijão e abacate" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
