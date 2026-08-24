@@ -25,6 +25,8 @@ Os registros da tela são demonstrativos e ficam apenas na sessão do navegador 
 
 O app continua funcionando em modo demonstrativo quando as variáveis do Supabase não estão definidas.
 
+A análise de alimentos e insights estatísticos da Fase 2 foi removida da interface atual. As tags simples continuam disponíveis para organização manual do histórico.
+
 ## Desenvolvimento
 
 1. Copie `.env.example` para `.env` e preencha `DATABASE_URL` com a conexão PostgreSQL.

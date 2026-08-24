@@ -15,7 +15,6 @@ type TimelineEvent = {
   detail: string;
   badge?: string;
   tags?: string[];
-  foods?: string[];
   photoFile?: File;
   photoPath?: string;
 };
@@ -29,7 +28,6 @@ const initialEvents: TimelineEvent[] = [
     title: "Almoço",
     detail: "Arroz, grão-de-bico, castanha e abacate",
     tags: ["leguminosas", "castanhas", "abacate"],
-    foods: ["arroz", "grão-de-bico", "castanha", "abacate"],
   },
   {
     id: "2",
@@ -96,7 +94,7 @@ export default function Home() {
       setUser(data.user ?? null);
       setAuthLoading(false);
       if (data.user) {
-        const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,foods,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
+        const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
         if (error) setAuthError(error.message);
         else if (rows) setEvents(rows.map(mapDatabaseEvent));
       } else {
@@ -108,7 +106,7 @@ export default function Home() {
       setUser(session?.user ?? null);
       setAuthLoading(false);
       if (session?.user) {
-        void client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,foods,photo_path").eq("user_id", session.user.id).order("event_time", { ascending: true }).then(({ data: rows, error }) => {
+        void client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", session.user.id).order("event_time", { ascending: true }).then(({ data: rows, error }) => {
           if (error) setAuthError(error.message);
           else if (rows) setEvents(rows.map(mapDatabaseEvent));
         });
@@ -148,7 +146,6 @@ export default function Home() {
         detail: eventWithDate.detail,
         badge: eventWithDate.badge ?? null,
         tags: eventWithDate.tags ?? [],
-        foods: eventWithDate.foods ?? [],
         photo_path: photoPath,
       });
       if (error) setAuthError(`Não foi possível salvar: ${error.message}`);
@@ -233,8 +230,6 @@ export default function Home() {
         </div>
       </section>
 
-      <Insights events={dayEvents} />
-
       <button
         className="fixed bottom-5 left-1/2 flex w-[calc(100%-40px)] max-w-md -translate-x-1/2 items-center justify-center gap-2 rounded-2xl bg-[#1e6341] px-5 py-4 font-semibold text-white shadow-[0_12px_28px_rgba(30,99,65,0.25)]"
         onClick={() => setShowEventPicker(true)}
@@ -268,8 +263,8 @@ function gutSummary(events: TimelineEvent[]) {
   return `Foram registradas ${bowel} ${bowel === 1 ? "evacuação" : "evacuações"} hoje.`;
 }
 
-function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; foods: string[] | null; photo_path?: string | null }): TimelineEvent {
-  return { id: row.id, date: row.event_date, kind: row.event_kind, time: row.event_time.slice(0, 5), title: row.title, detail: row.detail, badge: row.badge ?? undefined, tags: row.tags ?? [], foods: row.foods ?? [], photoPath: row.photo_path ?? undefined };
+function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }): TimelineEvent {
+  return { id: row.id, date: row.event_date, kind: row.event_kind, time: row.event_time.slice(0, 5), title: row.title, detail: row.detail, badge: row.badge ?? undefined, tags: row.tags ?? [], photoPath: row.photo_path ?? undefined };
 }
 
 function AuthPanel({ user, loading, error, onUser, onError, supabase }: { user: User | null; loading: boolean; error: string | null; onUser: (user: User | null) => void; onError: (message: string | null) => void; supabase: ReturnType<typeof getSupabaseBrowserClient> }) {
@@ -290,31 +285,6 @@ function AuthPanel({ user, loading, error, onUser, onError, supabase }: { user: 
     setBusy(false);
   }
   return <section className="mt-5 rounded-2xl border border-[#dce5dd] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#527063]">Diário privado</p><h2 className="mt-1 text-lg font-semibold">{mode === "signin" ? "Entre para sincronizar seus registros" : "Crie sua conta"}</h2><form onSubmit={submit} className="mt-3 space-y-2"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-[#dce5dd] px-3 py-2.5 text-sm" /><input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Senha (mínimo 6 caracteres)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-2.5 text-sm" /><button disabled={busy} className="w-full rounded-xl bg-[#1e6341] py-3 text-sm font-semibold text-white">{busy ? "Aguarde…" : mode === "signin" ? "Entrar e sincronizar" : "Criar conta"}</button></form>{error && <p className="mt-2 text-xs text-[#a34a3d]">{error}</p>}<button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); onError(null); }} className="mt-3 text-xs font-semibold text-[#39734f]">{mode === "signin" ? "Ainda não tenho conta" : "Já tenho uma conta"}</button></section>;
-}
-
-function Insights({ events }: { events: TimelineEvent[] }) {
-  const insights = buildInsights(events);
-  return <section className="mt-8 rounded-[26px] border border-[#e6ebe5] bg-white p-5 shadow-[0_5px_16px_rgba(32,62,45,0.04)]">
-    <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-medium text-[#698076]">Fase 2 · análise inicial</p><h2 className="mt-1 text-xl font-semibold">Possíveis padrões</h2></div><span className="rounded-full bg-[#fff4db] px-2.5 py-1 text-[11px] font-semibold text-[#8b6a2d]">beta</span></div>
-    {insights.length === 0 ? <p className="mt-4 text-sm leading-relaxed text-[#698076]">Registre refeições com tags e eventos de sintomas para começar a comparar exposições.</p> : <div className="mt-4 space-y-3">{insights.slice(0, 3).map((insight) => <article key={insight.tag} className="rounded-2xl bg-[#f5f8f4] p-4"><div className="flex items-center justify-between gap-2"><h3 className="font-semibold">#{insight.tag}</h3><span className="text-xs font-semibold text-[#39734f]">{insight.confidence}</span></div><p className="mt-1 text-sm leading-relaxed text-[#527063]">{insight.withSymptoms} de {insight.exposures} exposição{insight.exposures === 1 ? "" : "ões"} seguida{insight.withSymptoms === 1 ? "" : "s"} de sintoma em até 4 horas.</p><p className="mt-2 text-xs text-[#698076]">Sem sintomas: {insight.withoutSymptoms}. Associação observada nos seus registros; não indica causa.</p></article>)}</div>}
-  </section>;
-}
-
-function buildInsights(events: TimelineEvent[]) {
-  const meals = events.filter((event) => event.kind === "meal");
-  const symptoms = events.filter((event) => event.kind === "symptom" || event.kind === "bowel");
-  const tags = [...new Set(meals.flatMap((meal) => meal.tags || []))];
-  return tags.map((tag) => {
-    const exposures = meals.filter((meal) => meal.tags?.includes(tag));
-    const withSymptoms = exposures.filter((meal) => symptoms.some((symptom) => minutesBetween(meal.time, symptom.time) >= 0 && minutesBetween(meal.time, symptom.time) <= 240)).length;
-    return { tag, exposures: exposures.length, withSymptoms, withoutSymptoms: exposures.length - withSymptoms, confidence: exposures.length < 3 ? "Dados insuficientes" : exposures.length < 6 ? "Confiança baixa" : "Confiança moderada" };
-  }).sort((a, b) => b.withSymptoms / b.exposures - a.withSymptoms / a.exposures);
-}
-
-function minutesBetween(start: string, end: string) {
-  const [startHour, startMinute] = start.split(":").map(Number);
-  const [endHour, endMinute] = end.split(":").map(Number);
-  return endHour * 60 + endMinute - (startHour * 60 + startMinute);
 }
 
 function TimelineCard({ event }: { event: TimelineEvent }) {
@@ -375,17 +345,12 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
       .map((tag) => tag.trim().toLowerCase())
       .filter(Boolean)
       .slice(0, 6);
-    const foods = String(form.get("foods") || "")
-      .split(",")
-      .map((food) => food.trim().toLowerCase())
-      .filter(Boolean)
-      .slice(0, 12);
     const category = String(form.get("category") || "").trim();
 
     if (!value) return;
     const item: TimelineEvent =
       kind === "meal"
-        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, foods, photoFile: photoFile ?? undefined }
+        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
         : kind === "bowel"
           ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Bristol ${value}${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: `B${value}`, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
           : kind === "symptom"
@@ -415,10 +380,6 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         </label>
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <textarea name="value" required placeholder="Ex.: arroz, feijão e abacate" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
-        </label>}
-        {kind === "meal" && <label className="mt-4 block text-sm font-semibold">Alimentos individuais <span className="font-normal text-[#698076]">(opcional)</span>
-          <input name="foods" placeholder="Ex.: arroz, feijão, abacate (separe por vírgula)" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
-          <span className="mt-1 block text-xs font-normal text-[#698076]">Isso melhora a comparação por alimento e não altera o texto original.</span>
         </label>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">Tags para mapear o histórico <span className="font-normal text-[#698076]">(opcional)</span>
           <input name="tags" placeholder="Ex.: gordura, fibras, café (separe por vírgula)" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
