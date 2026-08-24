@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyMcpToken } from "@/lib/mcp-oauth";
 
 const protocolVersion = "2025-06-18";
 
@@ -24,7 +25,13 @@ async function authenticatedClient(request: Request) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const authorization = request.headers.get("authorization");
   if (!url || !key || !authorization?.startsWith("Bearer ")) return null;
-  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: authorization } } });
+  let supabaseAuthorization = authorization;
+  if (authorization.startsWith("Bearer mcp_")) {
+    const payload = verifyMcpToken(authorization.slice("Bearer mcp_".length));
+    if (!payload || payload.typ !== "mcp_access_token" || typeof payload.supabase_access_token !== "string") return null;
+    supabaseAuthorization = `Bearer ${payload.supabase_access_token}`;
+  }
+  const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: supabaseAuthorization } } });
   const { data, error } = await client.auth.getUser();
   if (error || !data.user) return null;
   return { client, user: data.user };

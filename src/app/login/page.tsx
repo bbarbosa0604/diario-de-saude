@@ -19,7 +19,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (!supabase) return;
     void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.replace("/");
+      const nextParam = new URLSearchParams(window.location.search).get("next");
+      const next = nextParam?.startsWith("/mcp/authorize") ? nextParam : "/";
+      if (data.user) router.replace(next);
     });
   }, [router, supabase]);
 
@@ -32,9 +34,11 @@ export default function LoginPage() {
     const result = mode === "signin"
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim(), intestinal_history: intestinalHistory.trim() } } });
+    const nextParam = new URLSearchParams(window.location.search).get("next");
+    const next = nextParam?.startsWith("/mcp/authorize") ? nextParam : "/";
     if (result.error) setError(result.error.message);
     else if (mode === "signup" && !result.data.session) setError("O cadastro foi criado, mas o Supabase ainda exige confirmação de e-mail. Desative Email Confirmations nas configurações do Supabase para liberar o acesso imediato.");
-    else router.replace("/");
+    else router.replace(next);
     setBusy(false);
   }
 
