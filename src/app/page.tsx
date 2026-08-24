@@ -350,8 +350,6 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [aiStatus, setAiStatus] = useState<string | null>(null);
-  const [aiBristol, setAiBristol] = useState<string | null>(null);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -367,12 +365,12 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
       .slice(0, 6);
     const category = String(form.get("category") || "").trim();
 
-    if (!value) return;
+    if (!value && kind !== "bowel") return;
     const item: TimelineEvent =
       kind === "meal"
         ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
         : kind === "bowel"
-          ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Bristol ${value}${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: `B${value}`, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
+          ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
           : kind === "symptom"
             ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity ? `Intensidade ${intensity}/10` : ""}${details ? `${intensity ? " · " : ""}${details}` : ""}`, badge: intensity ? `${intensity}/10` : undefined }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
@@ -408,12 +406,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {!['meal', 'bowel', 'symptom'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {kind === "bowel" && <label className="mt-4 block text-sm font-semibold">Escala de Bristol (1 a 7)
-          <select name="value" value={aiBristol || "4"} onChange={(event) => setAiBristol(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">{[1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n}</option>)}</select>
-        </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
           <p className="text-sm font-semibold">Foto {kind === "bowel" ? "da evacuação" : "da refeição"} <span className="font-normal text-[#698076]">(opcional)</span></p>
-          <p className="mt-1 text-xs leading-relaxed text-[#698076]">{kind === "bowel" ? "A foto poderá ser analisada por IA para sugerir uma escala de Bristol. Você sempre confirma antes de salvar." : "A foto fica vinculada ao evento da refeição para consulta futura."}</p>
+          <p className="mt-1 text-xs leading-relaxed text-[#698076]">{kind === "bowel" ? "Após salvar, a IA poderá analisar a foto e sugerir a escala de Bristol automaticamente." : "A foto fica vinculada ao evento da refeição para consulta futura."}</p>
           <label className="mt-3 flex cursor-pointer items-center justify-center rounded-xl bg-white px-3 py-3 text-sm font-semibold text-[#39734f] shadow-sm">
             {photoName ? "Trocar foto" : "Selecionar foto"}
             <input type="file" accept="image/*" className="sr-only" onChange={(event) => {
@@ -422,17 +417,13 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
               setPhotoName(file.name);
               setPhotoFile(file);
               setPhotoPreview(URL.createObjectURL(file));
-              setAiStatus(null);
-              setAiBristol(null);
             }} />
           </label>
           {photoPreview && <div className="mt-3 flex items-center gap-3">
             <img src={photoPreview} alt="Pré-visualização da evacuação" className="h-16 w-16 rounded-xl object-cover" />
             <div className="min-w-0 flex-1"><p className="truncate text-xs text-[#527063]">{photoName}</p>
-              {kind === "bowel" && <button type="button" className="mt-1 text-xs font-semibold text-[#39734f]" onClick={() => setAiStatus("A análise automática será ativada quando o provedor de IA estiver configurado. Por enquanto, escolha a escala manualmente.")}>✨ Preparar análise com IA</button>}
             </div>
           </div>}
-          {aiStatus && <p className="mt-2 text-xs font-medium text-[#39734f]">{aiStatus}</p>}
         </div>}
         {kind === "symptom" && <label className="mt-4 block text-sm font-semibold">Sintoma
           <select name="value" defaultValue="Cólica" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">{["Cólica", "Gases", "Estufamento", "Náusea", "Refluxo", "Outro"].map((s) => <option key={s}>{s}</option>)}</select>
