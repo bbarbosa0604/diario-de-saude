@@ -164,6 +164,20 @@ export default function Home() {
     setActiveForm(null);
   }
 
+  async function removeEvent(event: TimelineEvent) {
+    if (!window.confirm(`Excluir o registro “${event.title}”?`)) return;
+    setAuthError(null);
+    if (supabase && user) {
+      const { error } = await supabase.from("health_events").delete().eq("id", event.id).eq("user_id", user.id);
+      if (error) { setAuthError(`Não foi possível excluir: ${error.message}`); return; }
+      if (event.photoPath) {
+        const bucket = event.kind === "meal" || event.kind === "bowel" ? "health-event-photos" : null;
+        if (bucket) await supabase.storage.from(bucket).remove([event.photoPath]);
+      }
+    }
+    setEvents((current) => current.filter((item) => item.id !== event.id));
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-md bg-[#fcfcf9] px-5 pb-28 text-[#18342b]">
       <header className="flex items-center justify-between pt-8">
@@ -235,7 +249,7 @@ export default function Home() {
         </div>
         <div className="space-y-3">
           {dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).map((event) => (
-            <TimelineCard event={event} key={event.id} />
+            <TimelineCard event={event} key={event.id} onDelete={() => void removeEvent(event)} />
           ))}
           {dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).length === 0 && <div className="rounded-2xl border border-dashed border-[#cbd9ce] p-5 text-center text-sm text-[#698076]">Nenhum registro nesta categoria para este dia.</div>}
         </div>
@@ -307,7 +321,7 @@ function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: Eve
   return { id: row.id, date: row.event_date, kind: row.event_kind, time: row.event_time.slice(0, 5), title: row.title, detail: row.detail, badge: row.badge ?? undefined, tags: row.tags ?? [], photoPath: row.photo_path ?? undefined };
 }
 
-function TimelineCard({ event }: { event: TimelineEvent }) {
+function TimelineCard({ event, onDelete }: { event: TimelineEvent; onDelete: () => void }) {
   const icon = eventOptions.find((option) => option.kind === event.kind)?.icon || "📝";
   const color = event.kind === "meal" ? "bg-[#e9f3eb]" : event.kind === "bowel" ? "bg-[#fff2d9]" : "bg-[#fae8e5]";
   return (
@@ -317,7 +331,7 @@ function TimelineCard({ event }: { event: TimelineEvent }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold">{event.title}</h3>
-          {event.badge && <span className="rounded-full bg-[#f2f5f1] px-2 py-1 text-xs font-semibold text-[#527063]">{event.badge}</span>}
+          <div className="flex items-center gap-2">{event.badge && <span className="rounded-full bg-[#f2f5f1] px-2 py-1 text-xs font-semibold text-[#527063]">{event.badge}</span>}<button type="button" onClick={onDelete} aria-label={`Excluir ${event.title}`} className="rounded-full px-2 py-1 text-sm text-[#a34a3d] transition hover:bg-[#fae8e5]">Excluir</button></div>
         </div>
         <p className="mt-1 text-sm leading-snug text-[#698076]">{event.detail}</p>
         {event.tags && event.tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">
