@@ -46,10 +46,12 @@ export default function ProfilePage() {
     let nextAvatarPath = avatarPath;
     if (avatarFile) {
       nextAvatarPath = `${user.id}/avatar-${Date.now()}-${avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-      const { error: uploadError } = await supabase.storage.from("profile-photos").upload(nextAvatarPath, avatarFile, { upsert: true });
+      // O caminho inclui timestamp, portanto cada envio é um novo objeto. Evitar
+      // upsert elimina a necessidade de UPDATE/SELECT durante o upload.
+      const { error: uploadError } = await supabase.storage.from("profile-photos").upload(nextAvatarPath, avatarFile, { upsert: false });
       if (uploadError) {
         const storageMessage = uploadError.message.toLowerCase().includes("bucket not found")
-          ? "O armazenamento de fotos ainda não foi configurado no Supabase. Execute o bloco de Storage do arquivo supabase/schema.sql e tente novamente."
+          ? "O Supabase bloqueou o envio por segurança. Execute as políticas do bucket profile-photos no arquivo supabase/schema.sql e tente novamente."
           : `Não foi possível enviar a foto: ${uploadError.message}`;
         setError(storageMessage); setBusy(false); return;
       }
