@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  name      String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  events    HealthEvent[]
+}
+
+model HealthEvent {
+  id        String    @id @default(cuid())
+  userId    String
+  type      EventType
+  timestamp DateTime
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  tags      String[]  @default([])
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meal          Meal?
+  symptom       Symptom?
+  bowelMovement BowelMovement?
+
+  @@index([userId, timestamp])
+}
+
+model Meal {
+  id          String      @id @default(cuid())
+  eventId     String      @unique
+  description String?
+  mealType    MealType?
+  mealSize    MealSize?
+  event       HealthEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  foods       MealFood[]
+}
+
+model Food {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  category String?
+  aliases  String[]
+  tags     FoodTag[]
+  meals    MealFood[]
+}
+
+model FoodTag {
+  id     String @id @default(cuid())
+  foodId String
+  tag    String
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@unique([foodId, tag])
+  @@index([tag])
+}
+
+model MealFood {
+  id           String @id @default(cuid())
+  mealId       String
+  foodId       String
+  quantityText String?
+  meal         Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food         Food   @relation(fields: [foodId], references: [id])
+
+  @@unique([mealId, foodId])
+}
+
+model Symptom {
+  id              String      @id @default(cuid())
+  eventId         String      @unique
+  type            SymptomType
+  intensity       Int?
+  bodyLocation    BodyLocation?
+  durationMinutes Int?
+  notes           String?
+  event           HealthEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model BowelMovement {
+  id                   String      @id @default(cuid())
+  eventId              String      @unique
+  bristolType          Int?
+  urgency              Int?
+  difficulty           Int?
+  floating             Boolean?
+  mucus                Boolean?
+  blood                Boolean?
+  color                String?
+  odor                 String?
+  abdominalPain        Int?
+  analBurning          Int?
+  incompleteEvacuation Boolean?
+  notes                String?
+  event                HealthEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum EventType { MEAL SYMPTOM BOWEL_MOVEMENT MEDICATION WATER WEIGHT SLEEP EXERCISE NOTE }
+enum MealType { BREAKFAST MORNING_SNACK LUNCH AFTERNOON_SNACK DINNER EVENING_SNACK OTHER }
+enum MealSize { SMALL MEDIUM LARGE }
+enum SymptomType { ABDOMINAL_PAIN CRAMP BLOATING GAS NAUSEA REFLUX DIARRHEA CONSTIPATION ANAL_BURNING ANAL_ITCHING FATIGUE HEADACHE OTHER }
+enum BodyLocation { EPIGASTRIC UPPER_LEFT UPPER_RIGHT PERIUMBILICAL LOWER_LEFT LOWER_RIGHT PELVIC DIFFUSE }
