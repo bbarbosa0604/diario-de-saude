@@ -17,6 +17,8 @@ export async function POST(request: Request) {
   if (!date) return NextResponse.json({ error: "Data inválida para análise." }, { status: 400 });
   const { data: rows, error: eventsError } = await supabase.from("health_events").select("event_kind,event_time,title,detail,badge,tags").eq("user_id", userData.user.id).eq("event_date", date).order("event_time", { ascending: true }).limit(100);
   if (eventsError) return NextResponse.json({ error: "Não foi possível carregar os registros deste usuário." }, { status: 500 });
+  const { data: existing } = await supabase.from("ai_daily_summaries").select("summary").eq("user_id", userData.user.id).eq("event_date", date).maybeSingle();
+  if (existing?.summary) return NextResponse.json({ summary: existing.summary, alreadyEvaluated: true });
   const events = (rows ?? []).map((event) => ({ tipo: event.event_kind, horário: event.event_time, título: event.title, detalhe: event.detail, marcador: event.badge ?? "", tags: event.tags ?? [] }));
   const intestinalHistory = String(userData.user.user_metadata?.intestinal_history ?? "").slice(0, 4000);
   const { data: memories } = await supabase.from("ai_daily_summaries").select("event_date,summary").eq("user_id", userData.user.id).order("event_date", { ascending: false }).limit(5);

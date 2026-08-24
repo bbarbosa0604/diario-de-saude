@@ -88,12 +88,20 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<EventKind | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiLocked, setAiLocked] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
   const selectedDateLabel = selectedDate === "2026-08-10" ? "Hoje, 10 de agosto" : new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(new Date(`${selectedDate}T12:00:00`));
   const dayEvents = events.filter((event) => event.date === selectedDate);
 
+  useEffect(() => {
+    setAiSummary(null);
+    setAiLocked(false);
+    setAiError(null);
+  }, [selectedDate]);
+
   async function evaluateDay() {
+    if (aiLocked) return;
     setAiBusy(true); setAiError(null); setAiSummary(null);
     try {
       const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
@@ -105,7 +113,7 @@ export default function Home() {
       });
       const data = await response.json() as { summary?: string; error?: string };
       if (!response.ok) setAiError(data.error || "Não foi possível avaliar este dia.");
-      else setAiSummary(data.summary || null);
+      else { setAiSummary(data.summary || null); setAiLocked(true); }
     } catch {
       setAiError("Não foi possível conectar à análise por IA.");
     } finally {
@@ -247,10 +255,11 @@ export default function Home() {
           <div>
             <p className="font-semibold">Resumo inteligente do dia</p>
             <p className="mt-0.5 text-sm leading-snug text-[#698076]">{gutSummary(dayEvents)}</p>
-            <button type="button" onClick={() => void evaluateDay()} disabled={aiBusy} className="mt-3 rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Recriando análise…" : "✦ Avaliar meu dia"}</button>
+            <button type="button" onClick={() => void evaluateDay()} disabled={aiBusy || aiLocked} className="mt-3 rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Recriando análise…" : aiLocked ? "Avaliação realizada hoje" : "✦ Avaliar meu dia"}</button>
           </div>
         </div>
         {aiBusy && <p className="mt-3 rounded-xl bg-white/80 p-3 text-sm text-[#527063]">Recriando a análise com todos os registros deste dia e seu histórico intestinal…</p>}
+        {aiLocked && !aiBusy && <p className="mt-3 text-xs text-[#819189]">A avaliação deste dia já foi realizada. Uma nova avaliação estará disponível em outro dia.</p>}
         {aiError && <p className="mt-3 rounded-xl bg-[#fae8e5] p-3 text-sm text-[#9b4438]">{aiError}</p>}
         {aiSummary && <div className="mt-3 rounded-2xl border border-[#cfe0d1] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#39734f]">Análise dos seus registros</p><p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-[#527063]">{aiSummary}</p><p className="mt-3 text-xs leading-relaxed text-[#819189]">Associação observada nos seus registros. Isso não significa necessariamente relação de causa e efeito.</p></div>}
         {showDatePicker && <div className="mt-3 rounded-2xl border border-[#dce5dd] bg-white p-4 shadow-lg">
@@ -347,12 +356,14 @@ function Metric({ value, label, icon, active, onClick }: { value: number; label:
 }
 
 function gutSummary(events: TimelineEvent[]) {
-  const symptoms = events.filter((event) => event.kind === "symptom").length;
-  const bowel = events.filter((event) => event.kind === "bowel").length;
-  if (!symptoms && !bowel) return "Ainda não há sintomas ou evacuações registrados hoje.";
-  if (symptoms && bowel) return `Há ${symptoms} ${symptoms === 1 ? "sintoma" : "sintomas"} e ${bowel} ${bowel === 1 ? "evacuação" : "evacuações"} na sua linha do tempo.`;
-  if (symptoms) return `Foram registrados ${symptoms} ${symptoms === 1 ? "sintoma" : "sintomas"} hoje.`;
-  return `Foram registradas ${bowel} ${bowel === 1 ? "evacuação" : "evacuações"} hoje.`;
+  if (!events.length) return "Ainda não há registros na sua linha do tempo hoje.";
+  const labels = new Map<EventKind, string>(eventOptions.map((option) => [option.kind, option.label.toLowerCase()]));
+  const counts = [...new Set(events.map((event) => event.kind))].map((kind) => {
+    const count = events.filter((event) => event.kind === kind).length;
+    const label = labels.get(kind) || "evento";
+    return `${count} ${label}${count === 1 ? "" : "s"}`;
+  });
+  return `Hoje foram registrados ${events.length} ${events.length === 1 ? "evento" : "eventos"}: ${counts.join(", ")}.`;
 }
 
 function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }): TimelineEvent {
