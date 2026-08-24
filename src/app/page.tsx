@@ -85,9 +85,30 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState("2026-08-10");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeFilter, setActiveFilter] = useState<EventKind | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const selectedDateLabel = selectedDate === "2026-08-10" ? "Hoje, 10 de agosto" : new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(new Date(`${selectedDate}T12:00:00`));
   const dayEvents = events.filter((event) => event.date === selectedDate);
+
+  async function evaluateDay() {
+    setAiBusy(true); setAiError(null);
+    try {
+      const response = await fetch("/api/ai/daily-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: selectedDate, events: dayEvents }),
+      });
+      const data = await response.json() as { summary?: string; error?: string };
+      if (!response.ok) setAiError(data.error || "Não foi possível avaliar este dia.");
+      else setAiSummary(data.summary || null);
+    } catch {
+      setAiError("Não foi possível conectar à análise por IA.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!supabase) return;
@@ -214,8 +235,11 @@ export default function Home() {
           <div>
             <p className="font-semibold">Resumo inteligente do dia</p>
             <p className="mt-0.5 text-sm leading-snug text-[#698076]">{gutSummary(dayEvents)}</p>
+            <button type="button" onClick={() => void evaluateDay()} disabled={aiBusy} className="mt-3 rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Avaliando…" : "✦ Avaliar meu dia"}</button>
           </div>
         </div>
+        {aiError && <p className="mt-3 rounded-xl bg-[#fae8e5] p-3 text-sm text-[#9b4438]">{aiError}</p>}
+        {aiSummary && <div className="mt-3 rounded-2xl border border-[#cfe0d1] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#39734f]">Análise dos seus registros</p><p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-[#527063]">{aiSummary}</p><p className="mt-3 text-xs leading-relaxed text-[#819189]">Associação observada nos seus registros. Isso não significa necessariamente relação de causa e efeito.</p></div>}
         {showDatePicker && <div className="mt-3 rounded-2xl border border-[#dce5dd] bg-white p-4 shadow-lg">
           <label className="text-sm font-semibold">Escolha o dia
             <input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setShowDatePicker(false); setActiveFilter(null); }} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3" />
