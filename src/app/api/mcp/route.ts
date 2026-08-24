@@ -17,6 +17,8 @@ function tools() {
     { name: "get_daily_events", description: "Consulta todos os eventos de saúde do usuário em uma data.", inputSchema: { type: "object", properties: { date: { type: "string", description: "Data no formato YYYY-MM-DD" } }, required: ["date"] }, annotations: { readOnlyHint: true } },
     { name: "get_daily_summary", description: "Consulta a análise de IA já salva para uma data do usuário.", inputSchema: { type: "object", properties: { date: { type: "string", description: "Data no formato YYYY-MM-DD" } }, required: ["date"] }, annotations: { readOnlyHint: true } },
     { name: "get_period_report", description: "Gera estatísticas estruturadas dos registros do usuário em um período.", inputSchema: { type: "object", properties: { startDate: { type: "string" }, endDate: { type: "string" } }, required: ["startDate", "endDate"] }, annotations: { readOnlyHint: true } },
+    { name: "get_medical_exams", description: "Lista os exames e documentos privados cadastrados pelo usuário.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true } },
+    { name: "get_intestinal_history", description: "Consulta o histórico intestinal informado pelo usuário no perfil.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true } },
   ];
 }
 
@@ -80,6 +82,19 @@ export async function POST(request: Request) {
     const events = data ?? [];
     const byKind = Object.fromEntries([...new Set(events.map((event) => event.event_kind))].map((kind) => [kind, events.filter((event) => event.event_kind === kind).length]));
     return jsonRpc(id, textResult({ startDate: args.startDate, endDate: args.endDate, totalEvents: events.length, byKind, events }));
+  }
+  if (name === "get_medical_exams") {
+    const { data, error } = await auth.client.from("medical_documents").select("id,name,exam_type,exam_date,mime_type,size_bytes,created_at,storage_path").eq("user_id", auth.user.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
+    if (error) return errorRpc(id, -32000, "Não foi possível consultar os exames. Verifique se a tabela medical_documents foi criada no Supabase.");
+    const documents = await Promise.all((data ?? []).map(async (document) => {
+      const { data: signed } = await auth.client.storage.from("medical-exams").createSignedUrl(document.storage_path, 300);
+      return { id: document.id, name: document.name, examType: document.exam_type, examDate: document.exam_date, mimeType: document.mime_type, sizeBytes: document.size_bytes, createdAt: document.created_at, temporaryUrl: signed?.signedUrl ?? null };
+    }));
+    return jsonRpc(id, textResult({ documents, note: "Os links dos arquivos são temporários e expiram em 5 minutos." }));
+  }
+  if (name === "get_intestinal_history") {
+    const history = typeof auth.user.user_metadata?.intestinal_history === "string" ? auth.user.user_metadata.intestinal_history : "";
+    return jsonRpc(id, textResult({ history: history || null, available: Boolean(history), note: "Este texto é um contexto pessoal informado pelo usuário e não representa diagnóstico médico." }));
   }
   return errorRpc(id, -32602, "Ferramenta MCP não encontrada.");
 }
