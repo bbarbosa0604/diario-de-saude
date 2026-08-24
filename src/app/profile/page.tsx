@@ -47,7 +47,12 @@ export default function ProfilePage() {
     if (avatarFile) {
       nextAvatarPath = `${user.id}/avatar-${Date.now()}-${avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
       const { error: uploadError } = await supabase.storage.from("profile-photos").upload(nextAvatarPath, avatarFile, { upsert: true });
-      if (uploadError) { setError(`Não foi possível enviar a foto: ${uploadError.message}`); setBusy(false); return; }
+      if (uploadError) {
+        const storageMessage = uploadError.message.toLowerCase().includes("bucket not found")
+          ? "O armazenamento de fotos ainda não foi configurado no Supabase. Execute o bloco de Storage do arquivo supabase/schema.sql e tente novamente."
+          : `Não foi possível enviar a foto: ${uploadError.message}`;
+        setError(storageMessage); setBusy(false); return;
+      }
       const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(nextAvatarPath, 3600);
       if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
     }
