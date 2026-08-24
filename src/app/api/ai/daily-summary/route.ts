@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A análise por IA ainda não foi configurada neste ambiente." }, { status: 503 });
   }
 
-  let body: { date?: string; events?: SummaryEvent[] };
+  let body: { date?: string; events?: SummaryEvent[]; intestinalHistory?: string };
   try {
     body = await request.json();
   } catch {
@@ -31,11 +31,15 @@ export async function POST(request: Request) {
     marcador: String(event.badge ?? ""),
     tags: Array.isArray(event.tags) ? event.tags.slice(0, 10).map(String) : [],
   })) : [];
+  const intestinalHistory = String(body.intestinalHistory ?? "").slice(0, 4000);
 
   const prompt = `Analise os registros de saúde gastrointestinal do usuário no dia ${body.date ?? "informado"}.
 
 Registros:
 ${JSON.stringify(events, null, 2)}
+
+Histórico intestinal informado pelo usuário (contexto inicial, não diagnóstico):
+${intestinalHistory || "Nenhum histórico informado."}
 
 Escreva um resumo curto em português do Brasil, com no máximo 3 parágrafos. Aponte apenas padrões temporais ou associações observadas nos registros, sem afirmar causa, diagnóstico, intolerância ou recomendação de tratamento. Se não houver dados suficientes, diga isso claramente. Não invente informações. Sempre inclua uma frase final equivalente a: "Isso é uma associação observada nos seus registros e não significa necessariamente causa e efeito."`;
 

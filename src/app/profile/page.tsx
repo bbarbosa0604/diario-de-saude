@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [intestinalHistory, setIntestinalHistory] = useState("");
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -29,6 +30,7 @@ export default function ProfilePage() {
       setUser(data.user);
       setName(String(data.user.user_metadata?.full_name || ""));
       setBirthDate(String(data.user.user_metadata?.birth_date || ""));
+      setIntestinalHistory(String(data.user.user_metadata?.intestinal_history || ""));
       const storedPath = data.user.user_metadata?.avatar_path;
       if (storedPath) {
         setAvatarPath(storedPath);
@@ -58,7 +60,7 @@ export default function ProfilePage() {
       const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(nextAvatarPath, 3600);
       if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
     }
-    const { error: updateError } = await supabase.auth.updateUser({ data: { full_name: name.trim(), birth_date: birthDate || null, avatar_path: nextAvatarPath } });
+    const { error: updateError } = await supabase.auth.updateUser({ data: { full_name: name.trim(), birth_date: birthDate || null, avatar_path: nextAvatarPath, intestinal_history: intestinalHistory.trim() } });
     if (updateError) setError(updateError.message);
     else { setAvatarPath(nextAvatarPath); setAvatarFile(null); setMessage("Dados da conta atualizados."); }
     setBusy(false);
@@ -92,6 +94,7 @@ export default function ProfilePage() {
       <div className="flex items-center gap-4 rounded-3xl border border-[#e6ebe5] bg-white p-5"><div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e6f1e9] text-3xl">{avatarPreview ? <img src={avatarPreview} alt="Foto do perfil" className="h-full w-full object-cover" /> : "🌿"}</div><label className="cursor-pointer text-sm font-semibold text-[#39734f]">{avatarFile ? "Trocar foto" : "Adicionar foto"}<input type="file" accept="image/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }} /></label></div>
       <label className="block text-sm font-semibold">Nome<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Como você gostaria de ser chamado?" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
       <label className="block text-sm font-semibold">Data de nascimento<input type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+      <label className="block text-sm font-semibold">Histórico do intestino <span className="font-normal text-[#698076]">(opcional)</span><textarea value={intestinalHistory} onChange={(event) => setIntestinalHistory(event.target.value)} placeholder="Conte brevemente seu histórico intestinal para ajudar na análise dos registros." className="mt-2 block min-h-28 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /><span className="mt-1 block text-xs font-normal text-[#698076]">Use este campo como contexto pessoal. Ele não é um diagnóstico médico.</span></label>
       <div className="rounded-xl bg-[#f2f6f2] p-3 text-xs text-[#698076]">E-mail da conta: <span className="font-semibold">{user?.email}</span></div>
       <button disabled={busy} className="w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">{busy ? "Salvando…" : "Salvar alterações"}</button>
       {message && <p className="rounded-xl bg-[#e9f3eb] p-3 text-sm text-[#38624c]">{message}</p>}

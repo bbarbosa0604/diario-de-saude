@@ -9,6 +9,7 @@ export default function LoginPage() {
   const supabase = getSupabaseBrowserClient();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
+  const [intestinalHistory, setIntestinalHistory] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function LoginPage() {
     setMessage(null);
     const result = mode === "signin"
       ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim() } } });
+      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim(), intestinal_history: intestinalHistory.trim() } } });
     if (result.error) setError(result.error.message);
     else if (mode === "signup" && !result.data.session) setError("O cadastro foi criado, mas o Supabase ainda exige confirmação de e-mail. Desative Email Confirmations nas configurações do Supabase para liberar o acesso imediato.");
     else router.replace("/");
@@ -45,6 +46,7 @@ export default function LoginPage() {
       <p className="mt-2 text-sm leading-relaxed text-[#698076]">Entenda seus padrões com seus próprios registros. Seus dados ficam associados à sua conta e protegidos por usuário.</p>
       {!isSupabaseConfigured() ? <p className="mt-5 rounded-2xl bg-[#fff4db] p-4 text-sm leading-relaxed text-[#765d2c]">O Supabase ainda não está configurado neste ambiente. Adicione as variáveis públicas no `.env.local` para ativar o login.</p> : <form onSubmit={submit} className="mt-6 space-y-3">
         {mode === "signup" && <label className="block text-sm font-semibold">Nome<input required type="text" value={name} onChange={(event) => setName(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="Como você gostaria de ser chamado?" /></label>}
+        {mode === "signup" && <label className="block text-sm font-semibold">Histórico do intestino <span className="font-normal text-[#698076]">(opcional)</span><textarea value={intestinalHistory} onChange={(event) => setIntestinalHistory(event.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="Conte brevemente o que você costuma sentir, há quanto tempo e o que gostaria de acompanhar." /><span className="mt-1 block text-xs font-normal text-[#698076]">Esse contexto ajuda a IA a interpretar seus registros, sem substituir uma avaliação profissional.</span></label>}
         <label className="block text-sm font-semibold">E-mail<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="seu@email.com" /></label>
         <label className="block text-sm font-semibold">Senha<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" placeholder="Mínimo de 6 caracteres" /></label>
         <button disabled={busy} className="w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">{busy ? "Aguarde…" : mode === "signin" ? "Entrar" : "Criar conta"}</button>

@@ -93,12 +93,12 @@ export default function Home() {
   const dayEvents = events.filter((event) => event.date === selectedDate);
 
   async function evaluateDay() {
-    setAiBusy(true); setAiError(null);
+    setAiBusy(true); setAiError(null); setAiSummary(null);
     try {
       const response = await fetch("/api/ai/daily-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: selectedDate, events: dayEvents }),
+        body: JSON.stringify({ date: selectedDate, events: dayEvents, intestinalHistory: user?.user_metadata?.intestinal_history || "" }),
       });
       const data = await response.json() as { summary?: string; error?: string };
       if (!response.ok) setAiError(data.error || "Não foi possível avaliar este dia.");
@@ -235,9 +235,10 @@ export default function Home() {
           <div>
             <p className="font-semibold">Resumo inteligente do dia</p>
             <p className="mt-0.5 text-sm leading-snug text-[#698076]">{gutSummary(dayEvents)}</p>
-            <button type="button" onClick={() => void evaluateDay()} disabled={aiBusy} className="mt-3 rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Avaliando…" : "✦ Avaliar meu dia"}</button>
+            <button type="button" onClick={() => void evaluateDay()} disabled={aiBusy} className="mt-3 rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Recriando análise…" : "✦ Avaliar meu dia"}</button>
           </div>
         </div>
+        {aiBusy && <p className="mt-3 rounded-xl bg-white/80 p-3 text-sm text-[#527063]">Recriando a análise com todos os registros deste dia e seu histórico intestinal…</p>}
         {aiError && <p className="mt-3 rounded-xl bg-[#fae8e5] p-3 text-sm text-[#9b4438]">{aiError}</p>}
         {aiSummary && <div className="mt-3 rounded-2xl border border-[#cfe0d1] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#39734f]">Análise dos seus registros</p><p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-[#527063]">{aiSummary}</p><p className="mt-3 text-xs leading-relaxed text-[#819189]">Associação observada nos seus registros. Isso não significa necessariamente relação de causa e efeito.</p></div>}
         {showDatePicker && <div className="mt-3 rounded-2xl border border-[#dce5dd] bg-white p-4 shadow-lg">
