@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
 type EventKind = "meal" | "symptom" | "bowel" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
@@ -70,6 +71,7 @@ function timeNow() {
 }
 
 export default function Home() {
+  const router = useRouter();
   const supabase = getSupabaseBrowserClient();
   const [events, setEvents] = useState<TimelineEvent[]>(initialEvents);
   const [user, setUser] = useState<User | null>(null);
@@ -93,6 +95,7 @@ export default function Home() {
       if (!mounted) return;
       setUser(data.user ?? null);
       setAuthLoading(false);
+      if (!data.user) router.replace("/login");
       if (data.user) {
         const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
         if (error) setAuthError(error.message);
@@ -115,7 +118,7 @@ export default function Home() {
       }
     });
     return () => { mounted = false; authSubscription.subscription.unsubscribe(); };
-  }, [supabase]);
+  }, [router, supabase]);
 
   const summary = useMemo(
     () => ({
@@ -163,7 +166,7 @@ export default function Home() {
         <div className="grid h-11 w-11 place-items-center rounded-full bg-[#e6f1e9] text-xl">🌿</div>
       </header>
 
-      {isSupabaseConfigured() && <AuthPanel user={user} loading={authLoading} error={authError} onUser={setUser} onError={setAuthError} supabase={supabase} />}
+      {isSupabaseConfigured() && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Verificando sua sessão segura…</div>}
 
       <section className="mt-7 rounded-[28px] bg-[#e9f3eb] p-5 shadow-[0_8px_30px_rgba(38,81,59,0.08)]">
         <div className="flex items-center justify-between">
@@ -265,26 +268,6 @@ function gutSummary(events: TimelineEvent[]) {
 
 function mapDatabaseEvent(row: { id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }): TimelineEvent {
   return { id: row.id, date: row.event_date, kind: row.event_kind, time: row.event_time.slice(0, 5), title: row.title, detail: row.detail, badge: row.badge ?? undefined, tags: row.tags ?? [], photoPath: row.photo_path ?? undefined };
-}
-
-function AuthPanel({ user, loading, error, onUser, onError, supabase }: { user: User | null; loading: boolean; error: string | null; onUser: (user: User | null) => void; onError: (message: string | null) => void; supabase: ReturnType<typeof getSupabaseBrowserClient> }) {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  if (!supabase) return null;
-  const client = supabase;
-  if (loading) return <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Conectando ao seu diário seguro…</div>;
-  if (user) return <div className="mt-5 flex items-center justify-between rounded-2xl border border-[#dce5dd] bg-white px-4 py-3"><div><p className="text-xs text-[#698076]">Diário sincronizado</p><p className="mt-0.5 max-w-[220px] truncate text-sm font-semibold">{user.email}</p></div><button type="button" onClick={async () => { await client.auth.signOut(); onUser(null); }} className="text-xs font-semibold text-[#39734f]">Sair</button></div>;
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); onError(null);
-    const result = mode === "signin" ? await client.auth.signInWithPassword({ email, password }) : await client.auth.signUp({ email, password });
-    if (result.error) onError(result.error.message);
-    else if (result.data.user) onUser(result.data.user);
-    if (mode === "signup" && !result.error && !result.data.session) onError("Cadastro criado. Verifique seu e-mail para confirmar o acesso.");
-    setBusy(false);
-  }
-  return <section className="mt-5 rounded-2xl border border-[#dce5dd] bg-white p-4"><p className="text-xs font-semibold uppercase tracking-wide text-[#527063]">Diário privado</p><h2 className="mt-1 text-lg font-semibold">{mode === "signin" ? "Entre para sincronizar seus registros" : "Crie sua conta"}</h2><form onSubmit={submit} className="mt-3 space-y-2"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-[#dce5dd] px-3 py-2.5 text-sm" /><input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Senha (mínimo 6 caracteres)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-2.5 text-sm" /><button disabled={busy} className="w-full rounded-xl bg-[#1e6341] py-3 text-sm font-semibold text-white">{busy ? "Aguarde…" : mode === "signin" ? "Entrar e sincronizar" : "Criar conta"}</button></form>{error && <p className="mt-2 text-xs text-[#a34a3d]">{error}</p>}<button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); onError(null); }} className="mt-3 text-xs font-semibold text-[#39734f]">{mode === "signin" ? "Ainda não tenho conta" : "Já tenho uma conta"}</button></section>;
 }
 
 function TimelineCard({ event }: { event: TimelineEvent }) {

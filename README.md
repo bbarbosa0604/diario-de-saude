@@ -23,6 +23,8 @@ Os registros da tela são demonstrativos e ficam apenas na sessão do navegador 
 4. No projeto Vercel, adicione as mesmas duas variáveis em **Settings → Environment Variables** e faça um novo deploy.
 5. A Home exibirá login/cadastro. Depois de entrar, os eventos e fotos serão salvos no Supabase e protegidos por RLS.
 
+Com o Supabase configurado, a rota `/` exige uma sessão válida e redireciona automaticamente usuários não autenticados para `/login`. Após login ou criação da conta, o usuário retorna para a Home.
+
 O app continua funcionando em modo demonstrativo quando as variáveis do Supabase não estão definidas.
 
 A análise de alimentos e insights estatísticos da Fase 2 foi removida da interface atual. As tags simples continuam disponíveis para organização manual do histórico.
