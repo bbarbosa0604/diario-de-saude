@@ -402,7 +402,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         <label className="mt-5 block text-sm font-semibold">Horário
           <input name="time" type="time" defaultValue={timeNow()} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>
-        {kind !== "symptom" && kind !== "water" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
+        {kind !== "symptom" && kind !== "water" && kind !== "weight" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
           <select name="category" defaultValue="" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">
             <option value="">Sem categoria</option>
             {kind === "meal" && ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"].map((category) => <option key={category}>{category}</option>)}
@@ -419,7 +419,10 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "water" && <label className="mt-4 block text-sm font-semibold">Quantidade de água (ml)
           <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {!['meal', 'bowel', 'symptom', 'water'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
+        {kind === "weight" && <label className="mt-4 block text-sm font-semibold">Peso (kg)
+          <input name="value" required type="number" min="1" step="0.1" placeholder="Ex.: 70,5" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {!['meal', 'bowel', 'symptom', 'water', 'weight'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
