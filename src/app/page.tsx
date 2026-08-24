@@ -453,7 +453,7 @@ function ManagedSelect({ name, storageKey, defaults, placeholder, required = fal
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(`meuintestino:${storageKey}`) || "null");
-      if (Array.isArray(saved)) setOptions([...new Set([...defaults, ...saved].map(String))]);
+      if (Array.isArray(saved)) setOptions([...new Set(saved.map(String))]);
     } catch { /* usa as opções padrão */ }
   }, [storageKey]);
 
@@ -476,7 +476,6 @@ function ManagedSelect({ name, storageKey, defaults, placeholder, required = fal
   }
 
   function deleteItem(item: string) {
-    if (defaults.includes(item)) { window.alert("As opções padrão não podem ser excluídas, mas você pode editar o registro depois."); return; }
     if (!window.confirm(`Excluir “${item}” da lista?`)) return;
     persist(options.filter((option) => option !== item)); if (value === item) setValue("");
   }
