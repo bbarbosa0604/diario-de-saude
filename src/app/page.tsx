@@ -21,11 +21,30 @@ type TimelineEvent = {
   photoPath?: string;
 };
 
+function localDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function shiftDate(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00`);
+  value.setDate(value.getDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+const today = localDateString();
+
 const initialEvents: TimelineEvent[] = [
   {
     id: "1",
     kind: "meal",
-    date: "2026-08-10",
+    date: today,
     time: "12:15",
     title: "Almoço",
     detail: "Arroz, grão-de-bico, castanha e abacate",
@@ -34,7 +53,7 @@ const initialEvents: TimelineEvent[] = [
   {
     id: "2",
     kind: "symptom",
-    date: "2026-08-10",
+    date: today,
     time: "14:05",
     title: "Cólica",
     detail: "Intensidade 6 de 10",
@@ -43,7 +62,7 @@ const initialEvents: TimelineEvent[] = [
   {
     id: "3",
     kind: "bowel",
-    date: "2026-08-10",
+    date: today,
     time: "14:25",
     title: "Evacuação",
     detail: "Bristol 6 · urgência moderada",
@@ -84,7 +103,7 @@ export default function Home() {
   const [activeForm, setActiveForm] = useState<EventKind | null>(null);
   const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
   const [showEventPicker, setShowEventPicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("2026-08-10");
+  const [selectedDate, setSelectedDate] = useState(today);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeFilter, setActiveFilter] = useState<EventKind | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
@@ -93,7 +112,7 @@ export default function Home() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
 
-  const selectedDateLabel = selectedDate === "2026-08-10" ? "Hoje, 10 de agosto" : new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(new Date(`${selectedDate}T12:00:00`));
+  const selectedDateLabel = selectedDate === today ? `Hoje, ${new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" }).format(new Date())}` : new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", timeZone: "America/Sao_Paulo" }).format(new Date(`${selectedDate}T12:00:00`));
   const dayEvents = events.filter((event) => event.date === selectedDate);
 
   useEffect(() => {
@@ -262,11 +281,7 @@ export default function Home() {
           <button
             aria-label="Trocar dia"
             className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]"
-            onClick={() =>
-              setSelectedDate((date) =>
-                date === "2026-08-10" ? "2026-08-09" : "2026-08-10",
-              )
-            }
+            onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
           >
             ‹ Dia
           </button>
