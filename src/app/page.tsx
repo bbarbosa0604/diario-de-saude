@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
-type EventKind = "meal" | "symptom" | "bowel" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
+type EventKind = "meal" | "symptom" | "bowel" | "tea" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
 
 type TimelineEvent = {
   id: string;
@@ -55,6 +55,7 @@ const eventOptions: { kind: EventKind; icon: string; label: string; hint: string
   { kind: "meal", icon: "🍽", label: "Refeição", hint: "O que você comeu?" },
   { kind: "bowel", icon: "🚽", label: "Evacuação", hint: "Bristol, urgência e foto" },
   { kind: "symptom", icon: "✦", label: "Sintoma", hint: "Cólica, gases ou outro" },
+  { kind: "tea", icon: "🍵", label: "Chá", hint: "Tipo e quantidade" },
   { kind: "medication", icon: "💊", label: "Medicamento", hint: "Medicamento ou suplemento" },
   { kind: "water", icon: "💧", label: "Água", hint: "Quantidade ingerida" },
   { kind: "weight", icon: "⚖", label: "Peso", hint: "Medição do dia" },
@@ -356,7 +357,7 @@ function LandingPage() {
           <div className="relative mx-auto w-full max-w-md"><div className="absolute -inset-5 rounded-[42px] bg-[#e9f3eb] blur-2xl" /><div className="relative rounded-[32px] border border-[#e1e9e1] bg-white p-5 shadow-[0_20px_60px_rgba(32,62,45,0.12)]"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-[#698076]">Hoje</p><h2 className="mt-1 text-xl font-semibold">Como está seu intestino?</h2></div><span className="rounded-full bg-[#fff2d9] px-3 py-2 text-xl">🟡</span></div><div className="mt-5 rounded-2xl bg-[#e9f3eb] p-4"><p className="font-semibold">Resumo do dia</p><p className="mt-1 text-sm leading-relaxed text-[#698076]">Sua linha do tempo reúne alimentação, sintomas e evacuações em um só lugar.</p></div><div className="mt-5 space-y-3"><div className="flex items-center gap-3 rounded-2xl border border-[#edf1ed] p-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e9f3eb]">🍽</span><div><p className="text-xs text-[#819189]">12:15</p><p className="font-semibold">Almoço</p></div></div><div className="flex items-center gap-3 rounded-2xl border border-[#edf1ed] p-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff2d9]">🚽</span><div><p className="text-xs text-[#819189]">14:25</p><p className="font-semibold">Evacuação registrada</p></div></div></div></div></div>
         </div>
       </section>
-      <section id="recursos" className="border-y border-[#e8eee8] bg-white px-5 py-16 sm:px-8"><div className="mx-auto max-w-6xl"><div className="max-w-xl"><p className="text-sm font-semibold text-[#39734f]">Feito para a vida real</p><h2 className="mt-2 text-3xl font-semibold tracking-tight">Um diário leve, com o que realmente importa.</h2></div><div className="mt-10 grid gap-4 md:grid-cols-3"><Feature icon="⚡" title="Registro rápido" text="Adicione um evento em poucos segundos, sem formulários enormes." /><Feature icon="◷" title="Linha do tempo" text="Veja o que aconteceu antes e depois de cada sintoma." /><Feature icon="✦" title="Possíveis padrões" text="Encontre associações observadas nos seus próprios registros, sem diagnósticos." /></div></div></section>
+      <section id="recursos" className="border-y border-[#e8eee8] bg-white px-5 py-16 sm:px-8"><div className="mx-auto max-w-6xl"><div className="max-w-xl"><p className="text-sm font-semibold text-[#39734f]">Feito para a vida real</p><h2 className="mt-2 text-3xl font-semibold tracking-tight">Um diário leve, com o que realmente importa.</h2></div><div className="mt-10 grid gap-4 md:grid-cols-4"><Feature icon="⚡" title="Registro rápido" text="Adicione um evento em poucos segundos, sem formulários enormes." /><Feature icon="◷" title="Linha do tempo" text="Veja o que aconteceu antes e depois de cada sintoma." /><Feature icon="✦" title="Análise por IA" text="Avalie o dia completo e encontre associações observadas nos seus próprios registros." /><Feature icon="🔒" title="Memória individual" text="O histórico e as análises ficam separados por usuário, com proteção de acesso." /></div></div></section>
       <footer className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-[#819189] sm:flex-row sm:items-center sm:justify-between sm:px-8"><span>© {new Date().getFullYear()} Meuintestino</span><span>Seus dados, sua história, seu ritmo.</span></footer>
     </main>
   );
@@ -443,6 +444,46 @@ function EventPicker({ onClose, onSelect }: { onClose: () => void; onSelect: (ki
   );
 }
 
+function ManagedSelect({ name, storageKey, defaults, placeholder, required = false }: { name: string; storageKey: string; defaults: string[]; placeholder: string; required?: boolean }) {
+  const [options, setOptions] = useState(defaults);
+  const [value, setValue] = useState("");
+  const [managing, setManaging] = useState(false);
+  const [newItem, setNewItem] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`meuintestino:${storageKey}`) || "null");
+      if (Array.isArray(saved)) setOptions([...new Set([...defaults, ...saved].map(String))]);
+    } catch { /* usa as opções padrão */ }
+  }, [storageKey]);
+
+  function persist(next: string[]) {
+    setOptions(next);
+    localStorage.setItem(`meuintestino:${storageKey}`, JSON.stringify(next));
+  }
+
+  function addItem() {
+    const item = newItem.trim();
+    if (!item || options.includes(item)) return;
+    persist([...options, item]); setNewItem(""); setValue(item);
+  }
+
+  function editItem(item: string) {
+    const next = window.prompt("Editar item", item)?.trim();
+    if (!next || next === item || options.includes(next)) return;
+    const updated = options.map((option) => option === item ? next : option);
+    persist(updated); if (value === item) setValue(next);
+  }
+
+  function deleteItem(item: string) {
+    if (defaults.includes(item)) { window.alert("As opções padrão não podem ser excluídas, mas você pode editar o registro depois."); return; }
+    if (!window.confirm(`Excluir “${item}” da lista?`)) return;
+    persist(options.filter((option) => option !== item)); if (value === item) setValue("");
+  }
+
+  return <div className="mt-2"><div className="flex gap-2"><select name={name} required={required} value={value} onChange={(event) => setValue(event.target.value)} className="block min-w-0 flex-1 rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base"><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><button type="button" onClick={() => setManaging((open) => !open)} className="rounded-xl border border-[#b9cfc0] px-3 text-xs font-semibold text-[#39734f]">Gerenciar</button></div>{managing && <div className="mt-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><div className="flex gap-2"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Novo item" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div><div className="mt-3 space-y-2">{options.map((option) => <div key={option} className="flex items-center justify-between gap-2 text-sm"><span className="truncate">{option}</span><span className="flex gap-2"><button type="button" onClick={() => editItem(option)} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={() => deleteItem(option)} className="text-xs text-[#a34a3d]">Excluir</button></span></div>)}</div></div>}</div>;
+}
+
 function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => void; onSave: (event: TimelineEvent) => void }) {
   const title = `Registrar ${eventOptions.find((option) => option.kind === kind)?.label.toLowerCase() || "evento"}`;
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -475,6 +516,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
               ? { id: crypto.randomUUID(), kind, time, title: "Sono", detail: `${value} ${Number(value) === 1 ? "hora" : "horas"}${details ? ` · ${details}` : ""}` }
             : kind === "exercise"
               ? { id: crypto.randomUUID(), kind, time, title: category || "Atividade", detail: `${value} ${Number(value) === 1 ? "minuto" : "minutos"}` }
+            : kind === "tea"
+              ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity} ml` }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
     onSave(item);
   }
@@ -490,13 +533,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         <label className="mt-5 block text-sm font-semibold">Horário
           <input name="time" type="time" defaultValue={timeNow()} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>
-        {kind !== "symptom" && kind !== "water" && kind !== "weight" && kind !== "sleep" && kind !== "note" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
-          <select name="category" defaultValue="" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">
-            <option value="">Sem categoria</option>
-            {kind === "meal" && ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"].map((category) => <option key={category}>{category}</option>)}
-            {kind === "bowel" && ["Evacuação", "Evacuação urgente"].map((category) => <option key={category}>{category}</option>)}
-            {kind === "exercise" && ["Caminhada", "Corrida", "Musculação"].map((category) => <option key={category}>{category}</option>)}
-          </select>
+        {kind !== "symptom" && kind !== "water" && kind !== "weight" && kind !== "sleep" && kind !== "note" && kind !== "tea" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
+          <ManagedSelect name="category" storageKey={`${kind}-categories`} defaults={kind === "meal" ? ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"] : kind === "bowel" ? ["Evacuação", "Evacuação urgente"] : ["Caminhada", "Corrida", "Musculação"]} placeholder="Sem categoria" />
         </label>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <textarea name="value" required placeholder="Ex.: arroz, feijão e abacate" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
@@ -504,6 +542,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">Tags para mapear o histórico <span className="font-normal text-[#698076]">(opcional)</span>
           <input name="tags" placeholder="Ex.: gordura, fibras, café (separe por vírgula)" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
           <span className="mt-1 block text-xs font-normal text-[#698076]">Use tags consistentes para comparar registros depois.</span>
+        </label>}
+        {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Tipo de chá
+          <ManagedSelect name="value" storageKey="tea-types" defaults={["Camomila", "Hortelã", "Erva-doce", "Gengibre", "Verde", "Preto", "Outro"]} placeholder="Selecione o chá" />
         </label>}
         {kind === "water" && <label className="mt-4 block text-sm font-semibold">Quantidade de água (ml)
           <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
@@ -517,7 +558,10 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "exercise" && <label className="mt-4 block text-sm font-semibold">Tempo (minutos)
           <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 30" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {!['meal', 'bowel', 'symptom', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
+        {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Quantidade (ml)
+          <input name="intensity" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {!['meal', 'bowel', 'symptom', 'tea', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
@@ -540,7 +584,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
           </div>}
         </div>}
         {kind === "symptom" && <label className="mt-4 block text-sm font-semibold">Sintoma
-          <select name="value" defaultValue="Cólica" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">{["Cólica", "Gases", "Estufamento", "Náusea", "Refluxo", "Outro"].map((s) => <option key={s}>{s}</option>)}</select>
+          <ManagedSelect name="value" storageKey="symptoms" defaults={["Cólica", "Gases", "Estufamento", "Náusea", "Refluxo", "Outro"]} placeholder="Selecione o sintoma" required />
         </label>}
         {(kind === "bowel" || kind === "symptom") && <label className="mt-4 block text-sm font-semibold">{kind === "bowel" ? "Urgência (0 a 5)" : "Intensidade (0 a 10)"}
           <input name="intensity" type="number" min="0" max={kind === "bowel" ? "5" : "10"} defaultValue={kind === "bowel" ? "0" : "5"} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
