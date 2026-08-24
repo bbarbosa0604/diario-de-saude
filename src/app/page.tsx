@@ -389,6 +389,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
             ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity ? `Intensidade ${intensity}/10` : ""}${details ? `${intensity ? " · " : ""}${details}` : ""}`, badge: intensity ? `${intensity}/10` : undefined }
             : kind === "sleep"
               ? { id: crypto.randomUUID(), kind, time, title: "Sono", detail: `${value} ${Number(value) === 1 ? "hora" : "horas"}${details ? ` · ${details}` : ""}` }
+            : kind === "exercise"
+              ? { id: crypto.randomUUID(), kind, time, title: category || "Atividade", detail: `${value} ${Number(value) === 1 ? "minuto" : "minutos"}` }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
     onSave(item);
   }
@@ -409,6 +411,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
             <option value="">Sem categoria</option>
             {kind === "meal" && ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"].map((category) => <option key={category}>{category}</option>)}
             {kind === "bowel" && ["Evacuação", "Evacuação urgente"].map((category) => <option key={category}>{category}</option>)}
+            {kind === "exercise" && ["Caminhada", "Corrida", "Musculação"].map((category) => <option key={category}>{category}</option>)}
           </select>
         </label>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
@@ -427,7 +430,10 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "sleep" && <label className="mt-4 block text-sm font-semibold">Quantidade de sono (horas)
           <input name="value" required type="number" min="0.5" step="0.5" placeholder="Ex.: 7,5" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {!['meal', 'bowel', 'symptom', 'water', 'weight', 'sleep'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
+        {kind === "exercise" && <label className="mt-4 block text-sm font-semibold">Tempo (minutos)
+          <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 30" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {!['meal', 'bowel', 'symptom', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
