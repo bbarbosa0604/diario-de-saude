@@ -1,4 +1,4 @@
-# Diário do Intestino
+# Meuintestino
 
 Diário pessoal de saúde gastrointestinal, com foco em registros rápidos e em uma linha do tempo clara. O produto ajuda a entender padrões observados nos próprios registros — nunca diagnósticos.
 

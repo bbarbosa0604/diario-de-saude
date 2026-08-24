@@ -160,7 +160,7 @@ export default function Home() {
     <main className="mx-auto min-h-screen max-w-md bg-[#fcfcf9] px-5 pb-28 text-[#18342b]">
       <header className="flex items-center justify-between pt-8">
         <div>
-          <p className="text-sm font-medium text-[#698076]">Diário do Intestino</p>
+          <p className="text-sm font-medium text-[#698076]">Meuintestino</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Olá, Bruno.</h1>
         </div>
         <div className="grid h-11 w-11 place-items-center rounded-full bg-[#e6f1e9] text-xl">🌿</div>

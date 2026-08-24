@@ -39,7 +39,7 @@ export default function LoginPage() {
   return <main className="flex min-h-screen items-center justify-center bg-[#fcfcf9] px-5 text-[#18342b]">
     <section className="w-full max-w-md rounded-[30px] border border-[#e6ebe5] bg-white p-6 shadow-[0_12px_40px_rgba(32,62,45,0.08)]">
       <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e6f1e9] text-2xl">🌿</div>
-      <p className="mt-6 text-sm font-medium text-[#698076]">Diário do Intestino</p>
+      <p className="mt-6 text-sm font-medium text-[#698076]">Meuintestino</p>
       <h1 className="mt-1 text-2xl font-semibold">{mode === "signin" ? "Entre no seu diário" : "Crie seu acesso"}</h1>
       <p className="mt-2 text-sm leading-relaxed text-[#698076]">Entenda seus padrões com seus próprios registros. Seus dados ficam associados à sua conta e protegidos por usuário.</p>
       {!isSupabaseConfigured() ? <p className="mt-5 rounded-2xl bg-[#fff4db] p-4 text-sm leading-relaxed text-[#765d2c]">O Supabase ainda não está configurado neste ambiente. Adicione as variáveis públicas no `.env.local` para ativar o login.</p> : <form onSubmit={submit} className="mt-6 space-y-3">
