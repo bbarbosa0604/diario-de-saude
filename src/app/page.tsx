@@ -97,7 +97,6 @@ export default function Home() {
       const { data } = await client.auth.getUser();
       if (!mounted) return;
       setUser(data.user ?? null);
-      if (!data.user) router.replace("/login");
       if (data.user) {
         setEvents([]);
         const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
@@ -135,6 +134,8 @@ export default function Home() {
     }),
     [events],
   );
+
+  if (configured && !authLoading && !user) return <LandingPage />;
 
   async function addEvent(event: TimelineEvent) {
     const eventWithDate = { ...event, date: selectedDate };
@@ -251,6 +252,35 @@ export default function Home() {
       {activeForm && <QuickForm kind={activeForm} onClose={() => setActiveForm(null)} onSave={addEvent} />}
     </main>
   );
+}
+
+function LandingPage() {
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#fcfcf9] text-[#18342b]">
+      <section className="relative mx-auto max-w-6xl px-5 pb-16 pt-6 sm:px-8 lg:px-12">
+        <header className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#e6f1e9] text-xl">🌿</span>Meuintestino</Link>
+          <Link href="/login" className="rounded-full border border-[#cbd9ce] bg-white px-4 py-2 text-sm font-semibold text-[#38624c]">Entrar</Link>
+        </header>
+        <div className="grid items-center gap-12 pb-4 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24">
+          <div>
+            <p className="inline-flex rounded-full bg-[#e9f3eb] px-3 py-1.5 text-sm font-semibold text-[#39734f]">Seu corpo conta uma história</p>
+            <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">Entenda melhor o seu intestino, um registro de cada vez.</h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#698076]">Registre refeições, evacuações, sintomas e hábitos em uma linha do tempo simples. O Meuintestino ajuda você a perceber padrões nos seus próprios dados.</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/login" className="rounded-2xl bg-[#1e6341] px-6 py-4 text-center font-semibold text-white shadow-[0_12px_28px_rgba(30,99,65,0.22)] transition hover:bg-[#185436]">Criar minha conta</Link><Link href="/login" className="rounded-2xl border border-[#cbd9ce] bg-white px-6 py-4 text-center font-semibold text-[#38624c]">Já tenho uma conta</Link></div>
+            <p className="mt-4 text-xs text-[#819189]">Seus registros são pessoais e protegidos. O app não faz diagnósticos.</p>
+          </div>
+          <div className="relative mx-auto w-full max-w-md"><div className="absolute -inset-5 rounded-[42px] bg-[#e9f3eb] blur-2xl" /><div className="relative rounded-[32px] border border-[#e1e9e1] bg-white p-5 shadow-[0_20px_60px_rgba(32,62,45,0.12)]"><div className="flex items-center justify-between"><div><p className="text-sm font-medium text-[#698076]">Hoje</p><h2 className="mt-1 text-xl font-semibold">Como está seu intestino?</h2></div><span className="rounded-full bg-[#fff2d9] px-3 py-2 text-xl">🟡</span></div><div className="mt-5 rounded-2xl bg-[#e9f3eb] p-4"><p className="font-semibold">Resumo do dia</p><p className="mt-1 text-sm leading-relaxed text-[#698076]">Sua linha do tempo reúne alimentação, sintomas e evacuações em um só lugar.</p></div><div className="mt-5 space-y-3"><div className="flex items-center gap-3 rounded-2xl border border-[#edf1ed] p-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e9f3eb]">🍽</span><div><p className="text-xs text-[#819189]">12:15</p><p className="font-semibold">Almoço</p></div></div><div className="flex items-center gap-3 rounded-2xl border border-[#edf1ed] p-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff2d9]">🚽</span><div><p className="text-xs text-[#819189]">14:25</p><p className="font-semibold">Evacuação registrada</p></div></div></div></div></div>
+        </div>
+      </section>
+      <section id="recursos" className="border-y border-[#e8eee8] bg-white px-5 py-16 sm:px-8"><div className="mx-auto max-w-6xl"><div className="max-w-xl"><p className="text-sm font-semibold text-[#39734f]">Feito para a vida real</p><h2 className="mt-2 text-3xl font-semibold tracking-tight">Um diário leve, com o que realmente importa.</h2></div><div className="mt-10 grid gap-4 md:grid-cols-3"><Feature icon="⚡" title="Registro rápido" text="Adicione um evento em poucos segundos, sem formulários enormes." /><Feature icon="◷" title="Linha do tempo" text="Veja o que aconteceu antes e depois de cada sintoma." /><Feature icon="✦" title="Possíveis padrões" text="Encontre associações observadas nos seus próprios registros, sem diagnósticos." /></div></div></section>
+      <footer className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-[#819189] sm:flex-row sm:items-center sm:justify-between sm:px-8"><span>© {new Date().getFullYear()} Meuintestino</span><span>Seus dados, sua história, seu ritmo.</span></footer>
+    </main>
+  );
+}
+
+function Feature({ icon, title, text }: { icon: string; title: string; text: string }) {
+  return <article className="rounded-3xl border border-[#e5ece5] bg-[#fcfcf9] p-5"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e9f3eb] text-xl">{icon}</span><h3 className="mt-5 text-lg font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-[#698076]">{text}</p></article>;
 }
 
 function Metric({ value, label, icon, active, onClick }: { value: number; label: string; icon?: string; active?: boolean; onClick?: () => void }) {
