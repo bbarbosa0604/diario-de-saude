@@ -385,8 +385,10 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
         : kind === "bowel"
           ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
-          : kind === "symptom"
+        : kind === "symptom"
             ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity ? `Intensidade ${intensity}/10` : ""}${details ? `${intensity ? " · " : ""}${details}` : ""}`, badge: intensity ? `${intensity}/10` : undefined }
+            : kind === "sleep"
+              ? { id: crypto.randomUUID(), kind, time, title: "Sono", detail: `${value} ${Number(value) === 1 ? "hora" : "horas"}${details ? ` · ${details}` : ""}` }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
     onSave(item);
   }
@@ -402,7 +404,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         <label className="mt-5 block text-sm font-semibold">Horário
           <input name="time" type="time" defaultValue={timeNow()} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>
-        {kind !== "symptom" && kind !== "water" && kind !== "weight" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
+        {kind !== "symptom" && kind !== "water" && kind !== "weight" && kind !== "sleep" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
           <select name="category" defaultValue="" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base">
             <option value="">Sem categoria</option>
             {kind === "meal" && ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"].map((category) => <option key={category}>{category}</option>)}
@@ -422,7 +424,10 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "weight" && <label className="mt-4 block text-sm font-semibold">Peso (kg)
           <input name="value" required type="number" min="1" step="0.1" placeholder="Ex.: 70,5" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {!['meal', 'bowel', 'symptom', 'water', 'weight'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
+        {kind === "sleep" && <label className="mt-4 block text-sm font-semibold">Quantidade de sono (horas)
+          <input name="value" required type="number" min="0.5" step="0.5" placeholder="Ex.: 7,5" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {!['meal', 'bowel', 'symptom', 'water', 'weight', 'sleep'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
@@ -452,6 +457,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         </label>}
         {kind === "symptom" && <label className="mt-4 block text-sm font-semibold">Observação (opcional)
           <input name="details" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {kind === "sleep" && <label className="mt-4 block text-sm font-semibold">Detalhes (opcional)
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: acordei algumas vezes" />
         </label>}
         <button className="mt-6 w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">Salvar registro</button>
       </form>
