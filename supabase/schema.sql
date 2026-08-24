@@ -110,3 +110,43 @@ with check (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = (se
 drop policy if exists "Users can view their own profile photo" on storage.objects;
 create policy "Users can view their own profile photo" on storage.objects for select to authenticated
 using (bucket_id = 'profile-photos' and (storage.foldername(name))[1] = (select auth.jwt()->>'sub'));
+
+-- Exames e documentos de saúde. Os arquivos permanecem privados e não são enviados à IA automaticamente.
+create table if not exists public.medical_documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  exam_type text,
+  exam_date date,
+  storage_path text not null,
+  mime_type text not null,
+  size_bytes integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists medical_documents_user_date_idx on public.medical_documents(user_id, exam_date desc, created_at desc);
+alter table public.medical_documents enable row level security;
+revoke all on table public.medical_documents from anon;
+grant select, insert, delete on table public.medical_documents to authenticated;
+
+drop policy if exists "Users can view their own medical documents" on public.medical_documents;
+create policy "Users can view their own medical documents" on public.medical_documents for select to authenticated
+  using ((select auth.uid()) = user_id);
+drop policy if exists "Users can create their own medical documents" on public.medical_documents;
+create policy "Users can create their own medical documents" on public.medical_documents for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+drop policy if exists "Users can delete their own medical documents" on public.medical_documents;
+create policy "Users can delete their own medical documents" on public.medical_documents for delete to authenticated
+  using ((select auth.uid()) = user_id);
+
+insert into storage.buckets (id, name, public) values ('medical-exams', 'medical-exams', false)
+on conflict (id) do nothing;
+drop policy if exists "Users can upload their own medical documents" on storage.objects;
+create policy "Users can upload their own medical documents" on storage.objects for insert to authenticated
+with check (bucket_id = 'medical-exams' and (storage.foldername(name))[1] = (select auth.uid())::text);
+drop policy if exists "Users can view their own medical documents" on storage.objects;
+create policy "Users can view their own medical documents" on storage.objects for select to authenticated
+using (bucket_id = 'medical-exams' and (storage.foldername(name))[1] = (select auth.uid())::text);
+drop policy if exists "Users can delete their own medical documents" on storage.objects;
+create policy "Users can delete their own medical documents" on storage.objects for delete to authenticated
+using (bucket_id = 'medical-exams' and (storage.foldername(name))[1] = (select auth.uid())::text);

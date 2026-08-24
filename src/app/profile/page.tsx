@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
+type MedicalDocument = { id: string; name: string; exam_type: string | null; exam_date: string | null; storage_path: string; mime_type: string; size_bytes: number; created_at: string };
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
@@ -22,6 +24,12 @@ export default function ProfilePage() {
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<MedicalDocument[]>([]);
+  const [documentName, setDocumentName] = useState("");
+  const [documentType, setDocumentType] = useState("");
+  const [documentDate, setDocumentDate] = useState("");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentsBusy, setDocumentsBusy] = useState(false);
 
   useEffect(() => {
     if (!supabase) { setBusy(false); return; }
@@ -37,6 +45,8 @@ export default function ProfilePage() {
         const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(storedPath, 3600);
         if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
       }
+      const { data: savedDocuments } = await supabase.from("medical_documents").select("id,name,exam_type,exam_date,storage_path,mime_type,size_bytes,created_at").eq("user_id", data.user.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
+      setDocuments((savedDocuments as MedicalDocument[] | null) ?? []);
       setBusy(false);
     });
   }, [router, supabase]);
@@ -85,6 +95,36 @@ export default function ProfilePage() {
     setPasswordBusy(false);
   }
 
+  async function addDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !user || !documentFile) { setError("Selecione um arquivo de exame."); return; }
+    if (documentFile.size > 10 * 1024 * 1024) { setError("O arquivo deve ter no máximo 10 MB."); return; }
+    setDocumentsBusy(true); setError(null); setMessage(null);
+    const safeName = documentFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from("medical-exams").upload(path, documentFile, { upsert: false, contentType: documentFile.type || "application/octet-stream" });
+    if (uploadError) { setError(`Não foi possível enviar o exame: ${uploadError.message}`); setDocumentsBusy(false); return; }
+    const { data: row, error: insertError } = await supabase.from("medical_documents").insert({ user_id: user.id, name: documentName.trim() || documentFile.name, exam_type: documentType.trim() || null, exam_date: documentDate || null, storage_path: path, mime_type: documentFile.type || "application/octet-stream", size_bytes: documentFile.size }).select("id,name,exam_type,exam_date,storage_path,mime_type,size_bytes,created_at").single();
+    if (insertError || !row) { await supabase.storage.from("medical-exams").remove([path]); setError(`Não foi possível salvar o exame: ${insertError?.message || "erro desconhecido"}`); setDocumentsBusy(false); return; }
+    setDocuments((current) => [row as MedicalDocument, ...current]); setDocumentName(""); setDocumentType(""); setDocumentDate(""); setDocumentFile(null); setMessage("Exame anexado com segurança."); setDocumentsBusy(false);
+  }
+
+  async function openDocument(document: MedicalDocument) {
+    if (!supabase) return;
+    const { data, error: signedError } = await supabase.storage.from("medical-exams").createSignedUrl(document.storage_path, 300);
+    if (signedError || !data?.signedUrl) { setError("Não foi possível abrir este arquivo."); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function removeDocument(document: MedicalDocument) {
+    if (!supabase || !window.confirm(`Excluir “${document.name}”?`)) return;
+    setDocumentsBusy(true); setError(null);
+    const { error: deleteError } = await supabase.from("medical_documents").delete().eq("id", document.id).eq("user_id", user?.id || "");
+    if (deleteError) { setError(`Não foi possível excluir: ${deleteError.message}`); setDocumentsBusy(false); return; }
+    await supabase.storage.from("medical-exams").remove([document.storage_path]);
+    setDocuments((current) => current.filter((item) => item.id !== document.id)); setDocumentsBusy(false);
+  }
+
   if (!isSupabaseConfigured()) return <main className="flex min-h-screen items-center justify-center bg-[#fcfcf9] px-5 text-[#18342b]"><section className="max-w-md rounded-3xl bg-white p-6 text-center shadow-lg"><h1 className="text-xl font-semibold">Meuintestino</h1><p className="mt-3 text-sm text-[#698076]">Configure o Supabase para editar os dados da conta.</p></section></main>;
   if (busy && !user) return <main className="grid min-h-screen place-items-center bg-[#fcfcf9] text-sm text-[#698076]">Carregando sua conta…</main>;
 
@@ -100,6 +140,7 @@ export default function ProfilePage() {
       {message && <p className="rounded-xl bg-[#e9f3eb] p-3 text-sm text-[#38624c]">{message}</p>}
       {error && <p className="rounded-xl bg-[#fae8e5] p-3 text-sm text-[#9b4438]">{error}</p>}
     </form>
+    <section className="mt-7 rounded-3xl border border-[#e6ebe5] bg-white p-5"><div><h2 className="text-lg font-semibold">Exames e documentos</h2><p className="mt-1 text-sm leading-relaxed text-[#698076]">Anexe resultados para consultar quando precisar. Os arquivos são privados e não entram automaticamente na análise da IA.</p></div><form onSubmit={addDocument} className="mt-4 space-y-3"><input value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Nome do exame (opcional)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><input value={documentType} onChange={(event) => setDocumentType(event.target.value)} placeholder="Tipo do exame (opcional)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><label className="block text-sm font-semibold text-[#38624c]">Data do exame<input type="date" value={documentDate} onChange={(event) => setDocumentDate(event.target.value)} className="mt-2 w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /></label><label className="block cursor-pointer rounded-xl border border-dashed border-[#b9cfc0] bg-[#f7faf7] px-3 py-4 text-sm text-[#527063]">{documentFile ? documentFile.name : "Selecionar PDF ou imagem (máx. 10 MB)"}<input type="file" accept="application/pdf,image/*" className="sr-only" onChange={(event) => setDocumentFile(event.target.files?.[0] || null)} /></label><button disabled={documentsBusy || !documentFile} className="w-full rounded-2xl border border-[#b9cfc0] bg-[#f3f8f3] py-3 font-semibold text-[#39734f] disabled:opacity-50">{documentsBusy ? "Enviando…" : "Anexar exame"}</button></form>{documents.length > 0 && <div className="mt-5 space-y-2">{documents.map((document) => <div key={document.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[#f7faf7] p-3"><button type="button" onClick={() => void openDocument(document)} className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-semibold text-[#38624c]">📄 {document.name}</p><p className="mt-1 text-xs text-[#819189]">{document.exam_type || "Exame"}{document.exam_date ? ` · ${new Intl.DateTimeFormat("pt-BR").format(new Date(`${document.exam_date}T12:00:00`))}` : ""}</p></button><button type="button" disabled={documentsBusy} onClick={() => void removeDocument(document)} className="shrink-0 px-2 text-xs font-semibold text-[#a34a3d]">Excluir</button></div>)}</div>}</section>
     <button type="button" onClick={signOut} className="mt-8 w-full rounded-2xl border border-[#efc9c2] bg-white py-4 font-semibold text-[#a34a3d]">Sair da conta</button>
     <section className="mt-6 rounded-3xl border border-[#e6ebe5] bg-white p-5"><h2 className="text-lg font-semibold">Trocar senha</h2><p className="mt-1 text-sm leading-relaxed text-[#698076]">Por segurança, confirme sua senha atual antes de definir uma nova.</p><form onSubmit={changePassword} className="mt-4 space-y-3"><input required type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} placeholder="Senha atual" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><input required minLength={8} type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="Nova senha (mínimo 8 caracteres)" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><input required minLength={8} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirme a nova senha" className="w-full rounded-xl border border-[#dce5dd] px-3 py-3 text-base" /><button disabled={passwordBusy} className="w-full rounded-2xl border border-[#b9cfc0] bg-[#f3f8f3] py-3 font-semibold text-[#39734f]">{passwordBusy ? "Atualizando…" : "Atualizar senha"}</button></form></section>
   </main>;
