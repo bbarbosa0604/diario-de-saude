@@ -74,9 +74,11 @@ function timeNow() {
 export default function Home() {
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
-  const [events, setEvents] = useState<TimelineEvent[]>(initialEvents);
+  const configured = isSupabaseConfigured();
+  // Dados de demonstração só aparecem quando o Supabase não está configurado.
+  const [events, setEvents] = useState<TimelineEvent[]>(() => configured ? [] : initialEvents);
   const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured());
+  const [authLoading, setAuthLoading] = useState(configured);
   const [authError, setAuthError] = useState<string | null>(null);
   const [activeForm, setActiveForm] = useState<EventKind | null>(null);
   const [showEventPicker, setShowEventPicker] = useState(false);
@@ -95,27 +97,31 @@ export default function Home() {
       const { data } = await client.auth.getUser();
       if (!mounted) return;
       setUser(data.user ?? null);
-      setAuthLoading(false);
       if (!data.user) router.replace("/login");
       if (data.user) {
+        setEvents([]);
         const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
         if (error) setAuthError(error.message);
         else if (rows) setEvents(rows.map(mapDatabaseEvent));
       } else {
         setEvents([]);
       }
+      setAuthLoading(false);
     }
     void load();
     const { data: authSubscription } = client.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setAuthLoading(false);
+      setAuthLoading(true);
       if (session?.user) {
+        setEvents([]);
         void client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", session.user.id).order("event_time", { ascending: true }).then(({ data: rows, error }) => {
           if (error) setAuthError(error.message);
           else if (rows) setEvents(rows.map(mapDatabaseEvent));
+          setAuthLoading(false);
         });
       } else {
         setEvents([]);
+        setAuthLoading(false);
       }
     });
     return () => { mounted = false; authSubscription.subscription.unsubscribe(); };
@@ -167,7 +173,7 @@ export default function Home() {
         <Link href="/profile" aria-label="Minha conta" className="flex items-center gap-2 rounded-full bg-[#e6f1e9] px-3 py-2 text-sm font-semibold text-[#38624c] transition active:scale-95"><span className="text-lg">👤</span><span>Conta</span></Link>
       </header>
 
-      {isSupabaseConfigured() && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Verificando sua sessão segura…</div>}
+      {configured && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Carregando seus registros…</div>}
 
       <section className="mt-7 rounded-[28px] bg-[#e9f3eb] p-5 shadow-[0_8px_30px_rgba(38,81,59,0.08)]">
         <div className="flex items-center justify-between">
