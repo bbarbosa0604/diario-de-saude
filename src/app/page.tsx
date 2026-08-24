@@ -95,10 +95,12 @@ export default function Home() {
   async function evaluateDay() {
     setAiBusy(true); setAiError(null); setAiSummary(null);
     try {
+      const { data: sessionData } = supabase ? await supabase.auth.getSession() : { data: { session: null } };
+      if (!sessionData.session) { setAiError("Sua sessão expirou. Entre novamente para avaliar o dia."); return; }
       const response = await fetch("/api/ai/daily-summary", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: selectedDate, events: dayEvents, intestinalHistory: user?.user_metadata?.intestinal_history || "" }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` },
+        body: JSON.stringify({ date: selectedDate }),
       });
       const data = await response.json() as { summary?: string; error?: string };
       if (!response.ok) setAiError(data.error || "Não foi possível avaliar este dia.");

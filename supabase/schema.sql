@@ -52,6 +52,34 @@ drop trigger if exists health_events_updated_at on public.health_events;
 create trigger health_events_updated_at before update on public.health_events
 for each row execute function public.set_health_events_updated_at();
 
+-- Memória privada das análises diárias. Cada resumo pertence a um único usuário.
+create table if not exists public.ai_daily_summaries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  event_date date not null,
+  summary text not null,
+  model text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, event_date)
+);
+
+alter table public.ai_daily_summaries enable row level security;
+revoke all on table public.ai_daily_summaries from anon;
+grant select, insert, update on table public.ai_daily_summaries to authenticated;
+
+drop policy if exists "Users can view their own AI summaries" on public.ai_daily_summaries;
+create policy "Users can view their own AI summaries" on public.ai_daily_summaries for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users can create their own AI summaries" on public.ai_daily_summaries;
+create policy "Users can create their own AI summaries" on public.ai_daily_summaries for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Users can update their own AI summaries" on public.ai_daily_summaries;
+create policy "Users can update their own AI summaries" on public.ai_daily_summaries for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 -- Optional photo storage. Run this block after enabling Storage in the project.
 insert into storage.buckets (id, name, public) values ('health-event-photos', 'health-event-photos', false)
 on conflict (id) do nothing;
