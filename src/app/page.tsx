@@ -123,13 +123,9 @@ export default function Home() {
   }
 
   async function exportDayData() {
-    const history = String(user?.user_metadata?.intestinal_history || "").trim();
     const lines = [
       "Meuintestino — REGISTRO DO DIA",
       `Data: ${selectedDate}`,
-      "",
-      "HISTÓRICO INTESTINAL DO USUÁRIO:",
-      history || "Não informado.",
       "",
       "EVENTOS REGISTRADOS:",
       ...(dayEvents.length ? dayEvents.sort((a, b) => a.time.localeCompare(b.time)).map((event) => `- ${event.time} | ${event.kind} | ${event.title} | ${event.detail}${event.tags?.length ? ` | tags: ${event.tags.join(", ")}` : ""}`) : ["Nenhum evento registrado."]),
