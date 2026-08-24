@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HealthLog · Diário de saúde",
-  description: "Diário pessoal para acompanhar saúde gastrointestinal.",
+  title: "Diário do Intestino",
+  description: "Entenda seus padrões com seus próprios registros.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

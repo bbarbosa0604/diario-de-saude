@@ -1,6 +1,6 @@
-# HealthLog
+# Diário do Intestino
 
-Diário pessoal de saúde gastrointestinal, com foco em registros rápidos e em uma linha do tempo clara. O produto apresenta padrões observados nos registros do usuário — nunca diagnósticos.
+Diário pessoal de saúde gastrointestinal, com foco em registros rápidos e em uma linha do tempo clara. O produto ajuda a entender padrões observados nos próprios registros — nunca diagnósticos.
 
 ## Primeira entrega
 
