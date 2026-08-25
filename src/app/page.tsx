@@ -182,7 +182,25 @@ export default function Home() {
       if (!response.ok) throw new Error(`REST ${response.status}`);
       return await response.json() as Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }>;
     }
+    async function fetchEventsThroughApp(userId: string, sessionToken?: string) {
+      if (!sessionToken) throw new Error("session");
+      const response = await fetch("/api/events", { headers: { Authorization: `Bearer ${sessionToken}` }, cache: "no-store" });
+      if (!response.ok) throw new Error(`APP ${response.status}`);
+      return await response.json() as Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }>;
+    }
     async function loadEvents(userId: string, sessionToken?: string) {
+      try {
+        const appRows = await Promise.race([
+          fetchEventsThroughApp(userId, sessionToken),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("app-timeout")), 7000)),
+        ]);
+        if (appRows.length > 0) {
+          if (mounted) setEvents(appRows.map(mapDatabaseEvent));
+          return;
+        }
+      } catch {
+        // tenta os caminhos diretos abaixo
+      }
       // O endpoint REST evita que uma instância do SDK fique presa no Chrome
       // mobile. Se ele falhar, mantemos a tentativa pelo SDK como fallback.
       try {
