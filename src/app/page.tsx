@@ -233,6 +233,17 @@ export default function Home() {
         photo_path: photoPath,
       });
       if (error) setAuthError(`Não foi possível salvar: ${error.message}`);
+      if (!error && eventWithDate.kind === "bowel" && photoPath) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          const response = await fetch("/api/ai/classify-bowel-photo", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ eventId: eventWithDate.id, photoPath }) });
+          if (!response.ok) setAuthError("Evacuação registrada, mas a classificação da foto pela IA ainda não foi concluída.");
+          else {
+            const result = await response.json() as { bristolType?: number; confidence?: string };
+            if (result.bristolType) setEvents((current) => current.map((item) => item.id === eventWithDate.id ? { ...item, detail: `${item.detail} · Bristol ${result.bristolType} (IA)`, badge: `B${result.bristolType}`, tags: ["foto", "classificado pela IA"] } : item));
+          }
+        }
+      }
     }
     setActiveForm(null);
   }
@@ -530,7 +541,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
       kind === "meal"
         ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
         : kind === "bowel"
-          ? { id: crypto.randomUUID(), kind, time, title: category || "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
+          ? { id: crypto.randomUUID(), kind, time, title: "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${details ? ` · ${details}` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
         : kind === "symptom"
             ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity ? `Intensidade ${intensity}/10` : ""}${details ? `${intensity ? " · " : ""}${details}` : ""}`, badge: intensity ? `${intensity}/10` : undefined }
             : kind === "sleep"
@@ -554,8 +565,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         <label className="mt-5 block text-sm font-semibold">Horário
           <input name="time" type="time" defaultValue={timeNow()} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>
-        {kind !== "symptom" && kind !== "water" && kind !== "weight" && kind !== "sleep" && kind !== "note" && kind !== "tea" && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
-          <ManagedSelect name="category" storageKey={`${kind}-categories`} defaults={kind === "meal" ? ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"] : kind === "bowel" ? ["Evacuação", "Evacuação urgente"] : ["Caminhada", "Corrida", "Musculação"]} placeholder="Sem categoria" />
+        {(kind === "meal" || kind === "exercise") && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
+          <ManagedSelect name="category" storageKey={`${kind}-categories`} defaults={kind === "meal" ? ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"] : ["Caminhada", "Corrida", "Musculação"]} placeholder="Sem categoria" />
         </label>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <textarea name="value" required placeholder="Ex.: arroz, feijão e abacate" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
@@ -609,6 +620,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         </label>}
         {(kind === "bowel" || kind === "symptom") && <label className="mt-4 block text-sm font-semibold">{kind === "bowel" ? "Urgência (0 a 5)" : "Intensidade (0 a 10)"}
           <input name="intensity" type="number" min="0" max={kind === "bowel" ? "5" : "10"} defaultValue={kind === "bowel" ? "0" : "5"} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {kind === "bowel" && <label className="mt-4 block text-sm font-semibold">Observação (opcional)
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: sensação de evacuação incompleta" />
         </label>}
         {kind === "symptom" && <label className="mt-4 block text-sm font-semibold">Observação (opcional)
           <input name="details" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
