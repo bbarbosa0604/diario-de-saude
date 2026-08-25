@@ -462,7 +462,7 @@ function LandingPage() {
     <main className="min-h-screen overflow-hidden bg-[#fcfcf9] text-[#18342b]">
       <section className="relative mx-auto max-w-6xl px-5 pb-16 pt-6 sm:px-8 lg:px-12">
         <header className="flex items-center justify-between">
-          <Link href="/" aria-label="Meu Intestino" className="inline-flex items-center gap-2 text-lg font-semibold tracking-tight"><img src="/meu-intestino-icon.png" alt="" className="h-11 w-11 rounded-xl" />Meu Intestino</Link>
+          <Link href="/" aria-label="Meu Intestino" className="inline-flex"><img src="/logo.svg" alt="Meu Intestino" className="h-12 w-auto" /></Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-[#698076] sm:flex"><a href="#recursos" className="transition hover:text-[#39734f]">Recursos</a><a href="#como-funciona" className="transition hover:text-[#39734f]">Como funciona</a></nav>
           <Link href="/login" className="rounded-full border border-[#cbd9ce] bg-white px-4 py-2 text-sm font-semibold text-[#38624c]">Entrar</Link>
         </header>
