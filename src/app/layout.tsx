@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "Meu Intestino",
   description: "Entenda seus padrões com seus próprios registros.",
   icons: {
-    icon: [{ url: "/logo-icon-reference.png", type: "image/png" }],
-    apple: "/logo-icon-reference.png",
+    icon: [{ url: "/meu-intestino-icon.png", type: "image/png" }],
+    apple: "/meu-intestino-icon.png",
   },
 };
 
