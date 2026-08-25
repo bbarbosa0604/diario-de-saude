@@ -102,7 +102,8 @@ export default function ProfilePage() {
     setDocumentsBusy(true); setError(null); setMessage(null);
     const safeName = documentFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
-    let uploadError = (await supabase.storage.from("medical-exams").upload(path, documentFile, { upsert: false, cacheControl: "3600", contentType: "application/pdf" })).error;
+    const documentBytes = await documentFile.arrayBuffer();
+    let uploadError = (await supabase.storage.from("medical-exams").upload(path, documentBytes, { upsert: false, cacheControl: "3600", contentType: "application/pdf" })).error;
     // O Storage pode devolver apenas "HTTP 400" pelo SDK. A tentativa direta
     // preserva a mesma sessão e permite recuperar a mensagem real da API.
     if (uploadError) {
@@ -111,7 +112,7 @@ export default function ProfilePage() {
       const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
       if (sessionData.session && baseUrl && publishableKey) {
         const objectPath = path.split("/").map(encodeURIComponent).join("/");
-        const directResponse = await fetch(`${baseUrl}/storage/v1/object/medical-exams/${objectPath}`, { method: "POST", headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}`, "Content-Type": "application/pdf", "x-upsert": "false", "cache-control": "3600" }, body: documentFile });
+        const directResponse = await fetch(`${baseUrl}/storage/v1/object/medical-exams/${objectPath}`, { method: "POST", headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}`, "Content-Type": "application/pdf", "x-upsert": "false", "cache-control": "3600" }, body: documentBytes });
         if (directResponse.ok) uploadError = null;
         else {
           let apiMessage = "HTTP " + directResponse.status;
