@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" role="img" aria-labelledby="title desc">
   <title id="title">Meu Intestino</title>
-  <desc id="desc">Símbolo orgânico com uma folha e o nome Meu Intestino</desc>
-  <rect x="2" y="2" width="92" height="92" rx="28" fill="#e6f1e9"/>
-  <path d="M31 25c-8 0-14 6-14 14s6 14 14 14h10v10H31c-8 0-14 6-14 14s6 14 14 14h14c10 0 18-8 18-18V51h14c8 0 14-6 14-14s-6-14-14-14H63v-4c0-10-8-18-18-18h-2c-10 0-18 8-18 18v8h18v-8c0-1 1-2 2-2h2c1 0 2 1 2 2v22h18c2 0 4 2 4 4s-2 4-4 4H45V39H31c-2 0-4-2-4-4s2-4 4-4h14v-6H31Z" fill="#1b8b6f"/>
-  <path d="M67 17c8-9 18-10 25-9-2 8-7 17-17 19-6 1-10-2-12-4 1-2 2-4 4-6Z" fill="#78b96e"/>
-  <text x="116" y="60" fill="#18342b" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Meu Intestino</text>
+  <desc id="desc">Coração envolvendo um intestino e duas folhas</desc>
+  <circle cx="48" cy="48" r="44" fill="#1e6341"/>
+  <path d="M48 76C41 68 21 57 21 40c0-10 7-17 16-17 6 0 10 3 13 8 3-5 7-8 13-8 9 0 16 7 16 17 0 17-20 28-31 36Z" fill="none" stroke="#f7fff8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M38 40c-4 0-7 3-7 7s3 7 7 7h5v5h-5c-4 0-7 3-7 7s3 7 7 7h6c5 0 9-4 9-9v-9h7c4 0 7-3 7-7s-3-7-7-7h-7v-5c0-5-4-9-9-9h-1c-5 0-9 4-9 9v3h8v-3c0-1 1-2 2-2h1c1 0 2 1 2 2v15h13c1 0 2 1 2 2s-1 2-2 2H51V40h-13Z" fill="#f7fff8"/>
+  <path d="M39 18c-7-6-15-7-21-6 1 7 5 14 12 16 5 1 8-1 11-3 0-2-1-5-2-7Z" fill="#9bd878"/>
+  <path d="M57 18c7-6 15-7 21-6-1 7-5 14-12 16-5 1-8-1-11-3 0-2 1-5 2-7Z" fill="#9bd878"/>
+  <text x="116" y="59" fill="#18342b" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Meu Intestino</text>
 </svg>
