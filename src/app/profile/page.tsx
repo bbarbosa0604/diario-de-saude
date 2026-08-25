@@ -35,27 +35,45 @@ export default function ProfilePage() {
     if (!supabase) { setBusy(false); return; }
     void (async () => {
       try {
-        const result = await Promise.race([
-          supabase.auth.getUser(),
-          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 10000)),
+        // Em celulares, getUser pode aguardar uma chamada de rede mesmo quando
+        // a sessão já está persistida no navegador. A sessão local é suficiente
+        // para montar a conta e evita uma tela de carregamento infinita.
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("session-timeout")), 8000)),
         ]);
-        if (result.error || !result.data.user) { router.replace("/login"); return; }
-        const account = result.data.user;
+        let account = sessionResult.data.session?.user ?? null;
+        if (!account) {
+          const userResult = await Promise.race([
+            supabase.auth.getUser(),
+            new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("user-timeout")), 8000)),
+          ]);
+          account = userResult.data.user ?? null;
+        }
+        if (!account) { router.replace("/login"); return; }
         setUser(account);
         setName(String(account.user_metadata?.full_name || ""));
         setBirthDate(String(account.user_metadata?.birth_date || ""));
         setIntestinalHistory(String(account.user_metadata?.intestinal_history || ""));
+        setBusy(false);
         const storedPath = account.user_metadata?.avatar_path;
         if (storedPath) {
           setAvatarPath(storedPath);
-          const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(storedPath, 3600);
-          if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
+          void supabase.storage.from("profile-photos").createSignedUrl(storedPath, 3600).then(({ data: signed }) => {
+            if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
+          });
         }
-        const { data: savedDocuments } = await supabase.from("medical_documents").select("id,name,exam_date,storage_path,mime_type,size_bytes,created_at").eq("user_id", account.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
-        setDocuments((savedDocuments as MedicalDocument[] | null) ?? []);
+        // Documentos são carregados separadamente; uma falha nessa tabela não
+        // pode impedir o restante da conta de abrir no celular.
+        const documentsResult = await Promise.race([
+          supabase.from("medical_documents").select("id,name,exam_date,storage_path,mime_type,size_bytes,created_at").eq("user_id", account.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("documents-timeout")), 8000)),
+        ]);
+        if (!documentsResult.error) setDocuments((documentsResult.data as MedicalDocument[] | null) ?? []);
       } catch {
         setLoadError("Não foi possível carregar sua conta. Verifique sua conexão e tente novamente.");
-      } finally { setBusy(false); }
+        setBusy(false);
+      }
     })();
   }, [router, supabase]);
 
