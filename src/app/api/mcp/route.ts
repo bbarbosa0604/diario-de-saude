@@ -84,11 +84,11 @@ export async function POST(request: Request) {
     return jsonRpc(id, textResult({ startDate: args.startDate, endDate: args.endDate, totalEvents: events.length, byKind, events }));
   }
   if (name === "get_medical_exams") {
-    const { data, error } = await auth.client.from("medical_documents").select("id,name,exam_type,exam_date,mime_type,size_bytes,created_at,storage_path").eq("user_id", auth.user.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
+    const { data, error } = await auth.client.from("medical_documents").select("id,name,exam_date,mime_type,size_bytes,created_at,storage_path").eq("user_id", auth.user.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
     if (error) return errorRpc(id, -32000, "Não foi possível consultar os exames. Verifique se a tabela medical_documents foi criada no Supabase.");
     const documents = await Promise.all((data ?? []).map(async (document) => {
       const { data: signed } = await auth.client.storage.from("medical-exams").createSignedUrl(document.storage_path, 300);
-      return { id: document.id, name: document.name, examType: document.exam_type, examDate: document.exam_date, mimeType: document.mime_type, sizeBytes: document.size_bytes, createdAt: document.created_at, temporaryUrl: signed?.signedUrl ?? null };
+      return { id: document.id, name: document.name, examDate: document.exam_date, mimeType: document.mime_type, sizeBytes: document.size_bytes, createdAt: document.created_at, temporaryUrl: signed?.signedUrl ?? null };
     }));
     return jsonRpc(id, textResult({ documents, note: "Os links dos arquivos são temporários e expiram em 5 minutos." }));
   }

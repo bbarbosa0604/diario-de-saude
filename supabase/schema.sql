@@ -116,13 +116,14 @@ create table if not exists public.medical_documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
-  exam_type text,
   exam_date date,
   storage_path text not null,
   mime_type text not null,
   size_bytes integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+alter table public.medical_documents drop column if exists exam_type;
 
 create index if not exists medical_documents_user_date_idx on public.medical_documents(user_id, exam_date desc, created_at desc);
 alter table public.medical_documents enable row level security;
