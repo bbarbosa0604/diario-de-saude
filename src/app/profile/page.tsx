@@ -105,13 +105,14 @@ export default function ProfilePage() {
     const documentBytes = await documentFile.arrayBuffer();
     const medicalStorage = supabase.storage.from("medical-exams");
     const signedUpload = await medicalStorage.createSignedUploadUrl(path, { upsert: false });
+    const signedCreationError = signedUpload.error;
     let uploadError = signedUpload.error;
     if (!uploadError && signedUpload.data) {
       uploadError = (await medicalStorage.uploadToSignedUrl(path, signedUpload.data.token, documentBytes, { cacheControl: "3600", contentType: "application/pdf" })).error;
     }
     // O Storage pode devolver apenas "HTTP 400" pelo SDK. A tentativa direta
     // preserva a mesma sessão e permite recuperar a mensagem real da API.
-    if (uploadError) {
+    if (uploadError && !signedCreationError) {
       const { data: sessionData } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -123,7 +124,7 @@ export default function ProfilePage() {
           let apiMessage = "HTTP " + directResponse.status;
           const rawBody = await directResponse.text();
           try { const body = JSON.parse(rawBody) as { message?: string; error?: string }; apiMessage = body.message || body.error || rawBody || apiMessage; } catch { apiMessage = rawBody || apiMessage; }
-          uploadError = { message: apiMessage, statusCode: String(directResponse.status) } as typeof uploadError;
+          uploadError = { message: `${apiMessage} (upload assinado: ${uploadError.message})`, statusCode: String(directResponse.status) } as typeof uploadError;
         }
       }
     }
