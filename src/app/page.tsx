@@ -326,7 +326,6 @@ export default function Home() {
           <p className="text-sm font-medium text-[#698076]">{selectedDateLabel}</p>
             <h2 className="text-xl font-semibold">Seu resumo</h2>
           </div>
-          <span className="text-sm text-[#698076]">em construção</span>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {eventOptions.map((option) => {
