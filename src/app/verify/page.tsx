@@ -50,7 +50,7 @@ export default function VerifyPage() {
   return <main className="flex min-h-screen items-center justify-center bg-[#fcfcf9] px-5 text-[#18342b]">
     <section className="w-full max-w-md rounded-[30px] border border-[#e6ebe5] bg-white p-6 shadow-[0_12px_40px_rgba(32,62,45,0.08)]">
       <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e6f1e9] text-2xl">✉️</div>
-      <p className="mt-6 text-sm font-medium text-[#698076]">Meuintestino</p>
+      <p className="mt-6 text-sm font-medium text-[#698076]">Meu Intestino</p>
       <h1 className="mt-1 text-2xl font-semibold">Confirme seu e-mail</h1>
       <p className="mt-2 text-sm leading-relaxed text-[#698076]">Enviamos um código para validar sua conta. Se receber um link, você também pode clicar nele para concluir a confirmação.</p>
       {!isSupabaseConfigured() ? <p className="mt-5 rounded-2xl bg-[#fff4db] p-4 text-sm text-[#765d2c]">O Supabase ainda não está configurado neste ambiente.</p> : <form onSubmit={verify} className="mt-6 space-y-3">

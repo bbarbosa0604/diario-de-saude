@@ -146,7 +146,7 @@ export default function Home() {
 
   async function exportDayData() {
     const lines = [
-      "Meuintestino — REGISTRO DO DIA",
+      "Meu Intestino — REGISTRO DO DIA",
       `Data: ${selectedDate}`,
       "",
       "EVENTOS REGISTRADOS:",
@@ -356,7 +356,7 @@ export default function Home() {
     <main className="mx-auto min-h-screen max-w-md bg-[#fcfcf9] px-5 pb-28 text-[#18342b]">
       <header className="flex items-center justify-between pt-8">
         <div>
-          <p className="text-sm font-medium text-[#698076]">Meuintestino</p>
+          <p className="text-sm font-medium text-[#698076]">Meu Intestino</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Olá, Bruno.</h1>
         </div>
         <Link href="/profile" aria-label="Minha conta" className="flex items-center gap-2 rounded-full bg-[#e6f1e9] px-3 py-2 text-sm font-semibold text-[#38624c] transition active:scale-95"><span className="text-lg">👤</span><span>Conta</span></Link>
@@ -462,7 +462,7 @@ function LandingPage() {
     <main className="min-h-screen overflow-hidden bg-[#fcfcf9] text-[#18342b]">
       <section className="relative mx-auto max-w-6xl px-5 pb-16 pt-6 sm:px-8 lg:px-12">
         <header className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#e6f1e9] text-xl">🌿</span>Meuintestino</Link>
+          <Link href="/" aria-label="Meu Intestino" className="inline-flex"><img src="/logo.svg" alt="Meu Intestino" className="h-12 w-auto" /></Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-[#698076] sm:flex"><a href="#recursos" className="transition hover:text-[#39734f]">Recursos</a><a href="#como-funciona" className="transition hover:text-[#39734f]">Como funciona</a></nav>
           <Link href="/login" className="rounded-full border border-[#cbd9ce] bg-white px-4 py-2 text-sm font-semibold text-[#38624c]">Entrar</Link>
         </header>
@@ -470,7 +470,7 @@ function LandingPage() {
           <div>
             <p className="inline-flex rounded-full bg-[#e9f3eb] px-3 py-1.5 text-sm font-semibold text-[#39734f]">Seu corpo conta uma história</p>
             <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">Entenda melhor o seu intestino, um registro de cada vez.</h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#698076]">Registre refeições, evacuações, sintomas, hábitos e exames em um só lugar. O Meuintestino ajuda você a perceber padrões nos seus próprios dados.</p>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#698076]">Registre refeições, evacuações, sintomas, hábitos e exames em um só lugar. O Meu Intestino ajuda você a perceber padrões nos seus próprios dados.</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/login" className="rounded-2xl bg-[#1e6341] px-6 py-4 text-center font-semibold text-white shadow-[0_12px_28px_rgba(30,99,65,0.22)] transition hover:bg-[#185436]">Criar minha conta</Link><Link href="/login" className="rounded-2xl border border-[#cbd9ce] bg-white px-6 py-4 text-center font-semibold text-[#38624c]">Já tenho uma conta</Link></div>
             <p className="mt-4 text-xs text-[#819189]">Seus registros são pessoais e protegidos. O app não faz diagnósticos.</p>
           </div>
@@ -478,9 +478,9 @@ function LandingPage() {
         </div>
       </section>
       <section id="recursos" className="border-y border-[#e8eee8] bg-white px-5 py-16 sm:px-8"><div className="mx-auto max-w-6xl"><div className="max-w-xl"><p className="text-sm font-semibold text-[#39734f]">Feito para a vida real</p><h2 className="mt-2 text-3xl font-semibold tracking-tight">Um diário leve, com o que realmente importa.</h2><p className="mt-3 leading-relaxed text-[#698076]">Registre o seu dia sem complicação e transforme informações soltas em uma visão clara da sua rotina.</p></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Feature icon="⚡" title="Registro rápido" text="Adicione um evento em poucos segundos, sem formulários enormes." /><Feature icon="◷" title="Linha do tempo" text="Veja o que aconteceu antes e depois de cada sintoma." /><Feature icon="✦" title="Análise por IA" text="Avalie o dia completo e encontre associações observadas nos seus próprios registros." /><Feature icon="🔒" title="Memória individual" text="Seu histórico e suas análises ficam separados por usuário." /><Feature icon="📄" title="Exames privados" text="Guarde PDFs e imagens de exames no seu perfil, com acesso protegido e controle para excluir quando quiser." /><Feature icon="◈" title="MCP + Claude" text="Conecte seu diário ao Claude para consultar eventos e relatórios, sempre com sua autorização." /></div></div></section>
-      <section id="como-funciona" className="border-b border-[#cfe8df] bg-[#e8f5f2] px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center"><div><p className="text-sm font-semibold text-[#1b8b6f]">Do registro ao entendimento</p><h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#245443]">Mais clareza para conversar sobre a sua saúde.</h2><p className="mt-4 leading-relaxed text-[#527063]">O Meuintestino organiza alimentação, evacuações, sintomas, hidratação, sono, medicamentos e atividades em um único lugar.</p><Link href="/login" className="mt-7 inline-flex rounded-2xl bg-[#1b8b6f] px-5 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(27,139,111,0.2)]">Começar meu diário</Link></div><div className="grid gap-3 sm:grid-cols-3"><Step number="01" title="Registre" text="Anote o que aconteceu, no seu ritmo." /><Step number="02" title="Observe" text="Veja sua linha do tempo e seus padrões." /><Step number="03" title="Compartilhe" text="Use o MCP para consultar seus dados no Claude." /></div></div></section>
+      <section id="como-funciona" className="border-b border-[#cfe8df] bg-[#e8f5f2] px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center"><div><p className="text-sm font-semibold text-[#1b8b6f]">Do registro ao entendimento</p><h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#245443]">Mais clareza para conversar sobre a sua saúde.</h2><p className="mt-4 leading-relaxed text-[#527063]">O Meu Intestino organiza alimentação, evacuações, sintomas, hidratação, sono, medicamentos e atividades em um único lugar.</p><Link href="/login" className="mt-7 inline-flex rounded-2xl bg-[#1b8b6f] px-5 py-3 font-semibold text-white shadow-[0_10px_24px_rgba(27,139,111,0.2)]">Começar meu diário</Link></div><div className="grid gap-3 sm:grid-cols-3"><Step number="01" title="Registre" text="Anote o que aconteceu, no seu ritmo." /><Step number="02" title="Observe" text="Veja sua linha do tempo e seus padrões." /><Step number="03" title="Compartilhe" text="Use o MCP para consultar seus dados no Claude." /></div></div></section>
       <section className="bg-[#1b8b6f] px-5 py-14 text-white sm:px-8"><div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[28px] bg-[#15704a] p-7 sm:flex-row sm:items-center sm:p-10"><div><p className="text-sm font-semibold text-[#c8f0e4]">Seu diário, suas escolhas</p><h2 className="mt-2 max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">Comece a transformar dúvidas em informações úteis.</h2><p className="mt-3 max-w-xl text-sm leading-relaxed text-[#d8f2eb]">Crie sua conta gratuitamente e registre o primeiro evento do seu dia.</p></div><Link href="/login" className="shrink-0 rounded-2xl bg-white px-5 py-3 font-semibold text-[#1b8b6f] shadow-lg">Criar minha conta</Link></div></section>
-      <footer className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-[#819189] sm:flex-row sm:items-center sm:justify-between sm:px-8"><span>© {new Date().getFullYear()} Meuintestino</span><span>Seus dados, sua história, seu ritmo.</span></footer>
+      <footer className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-sm text-[#819189] sm:flex-row sm:items-center sm:justify-between sm:px-8"><span>© {new Date().getFullYear()} Meu Intestino</span><span>Seus dados, sua história, seu ritmo.</span></footer>
     </main>
   );
 }

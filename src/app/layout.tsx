@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Meuintestino",
+  title: "Meu Intestino",
   description: "Entenda seus padrões com seus próprios registros.",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],

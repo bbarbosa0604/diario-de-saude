@@ -44,14 +44,14 @@ function textResult(data: unknown) {
 }
 
 export async function GET() {
-  return NextResponse.json({ name: "Meuintestino MCP", protocolVersion, tools: tools().map((tool) => tool.name), authentication: "Bearer Supabase user access token" });
+  return NextResponse.json({ name: "Meu Intestino MCP", protocolVersion, tools: tools().map((tool) => tool.name), authentication: "Bearer Supabase user access token" });
 }
 
 export async function POST(request: Request) {
   let message: { id?: string | number | null; method?: string; params?: Record<string, unknown> };
   try { message = await request.json(); } catch { return errorRpc(null, -32700, "JSON inválido."); }
   const id = message.id ?? null;
-  if (message.method === "initialize") return jsonRpc(id, { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "Meuintestino MCP", version: "1.0.0" } });
+  if (message.method === "initialize") return jsonRpc(id, { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "Meu Intestino MCP", version: "1.0.0" } });
   if (message.method === "notifications/initialized") return new NextResponse(null, { status: 204 });
   if (message.method === "tools/list") return jsonRpc(id, { tools: tools() });
   if (message.method !== "tools/call") return errorRpc(id, -32601, "Método MCP não suportado.");
