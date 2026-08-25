@@ -116,7 +116,8 @@ export default function ProfilePage() {
         if (directResponse.ok) uploadError = null;
         else {
           let apiMessage = "HTTP " + directResponse.status;
-          try { const body = await directResponse.json() as { message?: string; error?: string }; apiMessage = body.message || body.error || apiMessage; } catch { /* mantém o status */ }
+          const rawBody = await directResponse.text();
+          try { const body = JSON.parse(rawBody) as { message?: string; error?: string }; apiMessage = body.message || body.error || rawBody || apiMessage; } catch { apiMessage = rawBody || apiMessage; }
           uploadError = { message: apiMessage, statusCode: String(directResponse.status) } as typeof uploadError;
         }
       }
