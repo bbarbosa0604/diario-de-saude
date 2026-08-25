@@ -366,12 +366,12 @@ export default function Home() {
       {authError && !authLoading && <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-[#fae8e5] p-4 text-sm text-[#9b4438]"><span>{authError}</span><button type="button" onClick={() => window.location.reload()} className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#9b4438]">Tentar novamente</button></div>}
 
       <section className="mt-7 rounded-[28px] bg-[#e9f3eb] p-5 shadow-[0_8px_30px_rgba(38,81,59,0.08)]">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-[#38624c]">{selectedDateLabel}</p>
             <h2 className="mt-1 text-xl font-semibold">Como está seu intestino?</h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             <button
               type="button"
               aria-label="Ver registros de hoje"
@@ -384,7 +384,7 @@ export default function Home() {
             <button
               type="button"
               aria-label="Trocar dia"
-              className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]"
+              className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]"
               onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
             >
               ‹ Dia
