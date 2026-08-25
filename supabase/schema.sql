@@ -4,7 +4,7 @@ create table if not exists public.health_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   event_date date not null,
-  event_kind text not null check (event_kind in ('meal', 'symptom', 'bowel', 'tea', 'medication', 'water', 'weight', 'sleep', 'exercise', 'note')),
+  event_kind text not null check (event_kind in ('meal', 'symptom', 'bowel', 'urine', 'tea', 'medication', 'water', 'weight', 'sleep', 'exercise', 'note')),
   event_time time not null,
   title text not null,
   detail text not null default '',
@@ -19,7 +19,7 @@ create table if not exists public.health_events (
 create index if not exists health_events_user_date_idx on public.health_events(user_id, event_date, event_time);
 
 alter table public.health_events drop constraint if exists health_events_event_kind_check;
-alter table public.health_events add constraint health_events_event_kind_check check (event_kind in ('meal', 'symptom', 'bowel', 'tea', 'medication', 'water', 'weight', 'sleep', 'exercise', 'note'));
+alter table public.health_events add constraint health_events_event_kind_check check (event_kind in ('meal', 'symptom', 'bowel', 'urine', 'tea', 'medication', 'water', 'weight', 'sleep', 'exercise', 'note'));
 
 alter table public.health_events enable row level security;
 
