@@ -76,7 +76,7 @@ const eventOptions: { kind: EventKind; icon: string; label: string; hint: string
   { kind: "urine", icon: "💧", label: "Urina", hint: "Jato, cor e ardência" },
   { kind: "symptom", icon: "✦", label: "Sintoma", hint: "Cólica, gases ou outro" },
   { kind: "tea", icon: "🍵", label: "Chá", hint: "Tipo e quantidade" },
-  { kind: "medication", icon: "💊", label: "Medicamento", hint: "Medicamento ou suplemento" },
+  { kind: "medication", icon: "💊", label: "Suplementação", hint: "Suplemento, vitamina ou enzima" },
   { kind: "water", icon: "💧", label: "Água", hint: "Quantidade ingerida" },
   { kind: "weight", icon: "⚖", label: "Peso", hint: "Medição do dia" },
   { kind: "sleep", icon: "☾", label: "Sono", hint: "Como você dormiu" },
