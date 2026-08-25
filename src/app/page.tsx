@@ -190,8 +190,12 @@ export default function Home() {
           fetchEventsDirect(userId, sessionToken),
           new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("rest-timeout")), 6000)),
         ]);
-        if (mounted) setEvents(directRows.map(mapDatabaseEvent));
-        return;
+        // Uma resposta vazia pode ocorrer enquanto o token ainda está sendo
+        // sincronizado no Chrome mobile; só encerramos aqui quando há dados.
+        if (directRows.length > 0) {
+          if (mounted) setEvents(directRows.map(mapDatabaseEvent));
+          return;
+        }
       } catch {
         // fallback abaixo
       }
@@ -208,7 +212,15 @@ export default function Home() {
       }
       if (!mounted) return;
       if (result.error) throw new Error(result.error.message);
-      setEvents((result.data ?? []).map(mapDatabaseEvent));
+      const sdkRows = result.data ?? [];
+      if (sdkRows.length > 0) {
+        setEvents(sdkRows.map(mapDatabaseEvent));
+        return;
+      }
+      // Última tentativa depois da renovação/sincronização da sessão.
+      await new Promise((resolve) => window.setTimeout(resolve, 900));
+      const retryRows = await fetchEventsDirect(userId, sessionToken);
+      if (mounted) setEvents(retryRows.map(mapDatabaseEvent));
     }
     async function load() {
       try {
