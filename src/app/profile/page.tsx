@@ -104,11 +104,8 @@ export default function ProfilePage() {
 
   async function signOut() {
     if (!supabase) { window.location.assign("/login"); return; }
-    // Não bloquear o usuário caso o endpoint de logout esteja lento no móvel.
-    await Promise.race([
-      supabase.auth.signOut({ scope: "local" }),
-      new Promise<void>((resolve) => window.setTimeout(resolve, 2500)),
-    ]);
+    // Inicia a revogação remota, mas não espera a rede para sair no móvel.
+    void supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
     // Garante a limpeza do token persistido mesmo se a chamada de rede expirou.
     const projectRef = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").match(/^https?:\/\/([^.]+)/)?.[1];
     if (projectRef) {
