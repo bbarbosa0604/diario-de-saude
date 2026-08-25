@@ -102,7 +102,24 @@ export default function ProfilePage() {
     setDocumentsBusy(true); setError(null); setMessage(null);
     const safeName = documentFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage.from("medical-exams").upload(path, documentFile, { upsert: false, cacheControl: "3600", contentType: "application/pdf" });
+    let uploadError = (await supabase.storage.from("medical-exams").upload(path, documentFile, { upsert: false, cacheControl: "3600", contentType: "application/pdf" })).error;
+    // O Storage pode devolver apenas "HTTP 400" pelo SDK. A tentativa direta
+    // preserva a mesma sessão e permite recuperar a mensagem real da API.
+    if (uploadError) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      if (sessionData.session && baseUrl && publishableKey) {
+        const objectPath = path.split("/").map(encodeURIComponent).join("/");
+        const directResponse = await fetch(`${baseUrl}/storage/v1/object/${objectPath}`, { method: "POST", headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}`, "Content-Type": "application/pdf", "x-upsert": "false", "cache-control": "3600" }, body: documentFile });
+        if (directResponse.ok) uploadError = null;
+        else {
+          let apiMessage = "HTTP " + directResponse.status;
+          try { const body = await directResponse.json() as { message?: string; error?: string }; apiMessage = body.message || body.error || apiMessage; } catch { /* mantém o status */ }
+          uploadError = { message: apiMessage, statusCode: String(directResponse.status) } as typeof uploadError;
+        }
+      }
+    }
     if (uploadError) {
       const details = uploadError.message.toLowerCase();
       const storageMessage = details.includes("bucket") || details.includes("not found")
