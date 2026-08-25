@@ -168,22 +168,26 @@ export default function Home() {
     if (!supabase) return;
     const client = supabase;
     let mounted = true;
-    async function fetchEventsDirect(userId: string) {
+    async function fetchEventsDirect(userId: string, sessionToken?: string) {
       const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      const { data: sessionData } = await client.auth.getSession();
-      if (!baseUrl || !publishableKey || !sessionData.session) throw new Error("session");
+      let accessToken = sessionToken;
+      if (!accessToken) {
+        const { data: sessionData } = await client.auth.getSession();
+        accessToken = sessionData.session?.access_token;
+      }
+      if (!baseUrl || !publishableKey || !accessToken) throw new Error("session");
       const query = new URLSearchParams({ select: "id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path", user_id: `eq.${userId}`, order: "event_time.asc" });
-      const response = await fetch(`${baseUrl}/rest/v1/health_events?${query.toString()}`, { headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}` }, cache: "no-store" });
+      const response = await fetch(`${baseUrl}/rest/v1/health_events?${query.toString()}`, { headers: { apikey: publishableKey, Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
       if (!response.ok) throw new Error(`REST ${response.status}`);
       return await response.json() as Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }>;
     }
-    async function loadEvents(userId: string) {
+    async function loadEvents(userId: string, sessionToken?: string) {
       // O endpoint REST evita que uma instância do SDK fique presa no Chrome
       // mobile. Se ele falhar, mantemos a tentativa pelo SDK como fallback.
       try {
         const directRows = await Promise.race([
-          fetchEventsDirect(userId),
+          fetchEventsDirect(userId, sessionToken),
           new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("rest-timeout")), 6000)),
         ]);
         if (mounted) setEvents(directRows.map(mapDatabaseEvent));
@@ -198,7 +202,7 @@ export default function Home() {
           new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 8000)),
         ]);
       } catch {
-        const rows = await fetchEventsDirect(userId);
+        const rows = await fetchEventsDirect(userId, sessionToken);
         if (mounted) setEvents(rows.map(mapDatabaseEvent));
         return;
       }
@@ -225,7 +229,7 @@ export default function Home() {
         if (!account) { setUser(null); setEvents([]); setAuthLoading(false); return; }
         if (!mounted) return;
         setUser(account); setEvents([]); setAuthError(null);
-        await loadEvents(account.id);
+        await loadEvents(account.id, sessionResult.data.session?.access_token);
       } catch {
         if (mounted) setAuthError("Não foi possível carregar seus registros. Verifique a conexão e tente novamente.");
       } finally { if (mounted) setAuthLoading(false); }
@@ -237,7 +241,7 @@ export default function Home() {
       if (session?.user) {
         setEvents([]);
         setAuthError(null);
-        void loadEvents(session.user.id).catch(() => setAuthError("Não foi possível carregar seus registros. Verifique a conexão e tente novamente.")).finally(() => setAuthLoading(false));
+        void loadEvents(session.user.id, session.access_token).catch(() => setAuthError("Não foi possível carregar seus registros. Verifique a conexão e tente novamente.")).finally(() => setAuthLoading(false));
       } else {
         setEvents([]);
         setAuthLoading(false);
