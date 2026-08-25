@@ -103,7 +103,12 @@ export default function ProfilePage() {
     const safeName = documentFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
     const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
     const documentBytes = await documentFile.arrayBuffer();
-    let uploadError = (await supabase.storage.from("medical-exams").upload(path, documentBytes, { upsert: false, cacheControl: "3600", contentType: "application/pdf" })).error;
+    const medicalStorage = supabase.storage.from("medical-exams");
+    const signedUpload = await medicalStorage.createSignedUploadUrl(path, { upsert: false });
+    let uploadError = signedUpload.error;
+    if (!uploadError && signedUpload.data) {
+      uploadError = (await medicalStorage.uploadToSignedUrl(path, signedUpload.data.token, documentBytes, { cacheControl: "3600", contentType: "application/pdf" })).error;
+    }
     // O Storage pode devolver apenas "HTTP 400" pelo SDK. A tentativa direta
     // preserva a mesma sessão e permite recuperar a mensagem real da API.
     if (uploadError) {
