@@ -111,7 +111,7 @@ export default function ProfilePage() {
       const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
       if (sessionData.session && baseUrl && publishableKey) {
         const objectPath = path.split("/").map(encodeURIComponent).join("/");
-        const directResponse = await fetch(`${baseUrl}/storage/v1/object/${objectPath}`, { method: "POST", headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}`, "Content-Type": "application/pdf", "x-upsert": "false", "cache-control": "3600" }, body: documentFile });
+        const directResponse = await fetch(`${baseUrl}/storage/v1/object/medical-exams/${objectPath}`, { method: "POST", headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}`, "Content-Type": "application/pdf", "x-upsert": "false", "cache-control": "3600" }, body: documentFile });
         if (directResponse.ok) uploadError = null;
         else {
           let apiMessage = "HTTP " + directResponse.status;
