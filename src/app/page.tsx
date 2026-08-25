@@ -179,6 +179,18 @@ export default function Home() {
       return await response.json() as Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }>;
     }
     async function loadEvents(userId: string) {
+      // O endpoint REST evita que uma instância do SDK fique presa no Chrome
+      // mobile. Se ele falhar, mantemos a tentativa pelo SDK como fallback.
+      try {
+        const directRows = await Promise.race([
+          fetchEventsDirect(userId),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("rest-timeout")), 6000)),
+        ]);
+        if (mounted) setEvents(directRows.map(mapDatabaseEvent));
+        return;
+      } catch {
+        // fallback abaixo
+      }
       let result: { data: Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }> | null; error: { message: string } | null };
       try {
         result = await Promise.race([

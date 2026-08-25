@@ -103,8 +103,21 @@ export default function ProfilePage() {
   }
 
   async function signOut() {
-    if (supabase) await supabase.auth.signOut();
-    router.replace("/login");
+    if (!supabase) { window.location.assign("/login"); return; }
+    // Não bloquear o usuário caso o endpoint de logout esteja lento no móvel.
+    await Promise.race([
+      supabase.auth.signOut({ scope: "local" }),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 2500)),
+    ]);
+    // Garante a limpeza do token persistido mesmo se a chamada de rede expirou.
+    const projectRef = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").match(/^https?:\/\/([^.]+)/)?.[1];
+    if (projectRef) {
+      try {
+        localStorage.removeItem(`sb-${projectRef}-auth-token`);
+        sessionStorage.removeItem(`sb-${projectRef}-auth-token`);
+      } catch { /* armazenamento indisponível */ }
+    }
+    window.location.assign("/login");
   }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
