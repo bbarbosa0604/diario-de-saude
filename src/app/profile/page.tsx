@@ -29,25 +29,34 @@ export default function ProfilePage() {
   const [documentDate, setDocumentDate] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentsBusy, setDocumentsBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) { setBusy(false); return; }
-    void supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { router.replace("/login"); return; }
-      setUser(data.user);
-      setName(String(data.user.user_metadata?.full_name || ""));
-      setBirthDate(String(data.user.user_metadata?.birth_date || ""));
-      setIntestinalHistory(String(data.user.user_metadata?.intestinal_history || ""));
-      const storedPath = data.user.user_metadata?.avatar_path;
-      if (storedPath) {
-        setAvatarPath(storedPath);
-        const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(storedPath, 3600);
-        if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
-      }
-      const { data: savedDocuments } = await supabase.from("medical_documents").select("id,name,exam_date,storage_path,mime_type,size_bytes,created_at").eq("user_id", data.user.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
-      setDocuments((savedDocuments as MedicalDocument[] | null) ?? []);
-      setBusy(false);
-    });
+    void (async () => {
+      try {
+        const result = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 10000)),
+        ]);
+        if (result.error || !result.data.user) { router.replace("/login"); return; }
+        const account = result.data.user;
+        setUser(account);
+        setName(String(account.user_metadata?.full_name || ""));
+        setBirthDate(String(account.user_metadata?.birth_date || ""));
+        setIntestinalHistory(String(account.user_metadata?.intestinal_history || ""));
+        const storedPath = account.user_metadata?.avatar_path;
+        if (storedPath) {
+          setAvatarPath(storedPath);
+          const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(storedPath, 3600);
+          if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
+        }
+        const { data: savedDocuments } = await supabase.from("medical_documents").select("id,name,exam_date,storage_path,mime_type,size_bytes,created_at").eq("user_id", account.id).order("exam_date", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
+        setDocuments((savedDocuments as MedicalDocument[] | null) ?? []);
+      } catch {
+        setLoadError("Não foi possível carregar sua conta. Verifique sua conexão e tente novamente.");
+      } finally { setBusy(false); }
+    })();
   }, [router, supabase]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -160,6 +169,7 @@ export default function ProfilePage() {
 
   if (!isSupabaseConfigured()) return <main className="flex min-h-screen items-center justify-center bg-[#fcfcf9] px-5 text-[#18342b]"><section className="max-w-md rounded-3xl bg-white p-6 text-center shadow-lg"><h1 className="text-xl font-semibold">Meuintestino</h1><p className="mt-3 text-sm text-[#698076]">Configure o Supabase para editar os dados da conta.</p></section></main>;
   if (busy && !user) return <main className="grid min-h-screen place-items-center bg-[#fcfcf9] text-sm text-[#698076]">Carregando sua conta…</main>;
+  if (loadError && !user) return <main className="grid min-h-screen place-items-center bg-[#f9f7f3] px-5 text-center"><section className="max-w-md rounded-3xl bg-white p-6 shadow-sm"><p className="text-sm text-[#9b4438]">{loadError}</p><button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-[#1b8b6f] px-5 py-3 text-sm font-semibold text-white">Tentar novamente</button></section></main>;
 
   return <main className="min-h-screen bg-[#f9f7f3] text-[#2c2c2c]"><div className="mx-auto max-w-3xl px-5 pb-12 sm:px-8">
     <header className="flex items-center justify-between border-b border-[#e8f5f2] py-5"><div className="flex items-center gap-3"><button type="button" onClick={() => router.back()} className="grid h-10 w-10 place-items-center rounded-full bg-white text-xl text-[#1b8b6f] shadow-sm" aria-label="Voltar">‹</button><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1b8b6f]">Meuintestino</p><h1 className="text-2xl font-bold text-[#2c2c2c]">Minha conta</h1></div></div><button type="button" onClick={signOut} className="rounded-full border border-[#e2c5b9] bg-white px-4 py-2 text-sm font-semibold text-[#a34a3d]">Sair</button></header>
