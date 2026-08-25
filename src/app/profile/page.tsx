@@ -59,9 +59,13 @@ export default function ProfilePage() {
         const storedPath = account.user_metadata?.avatar_path;
         if (storedPath) {
           setAvatarPath(storedPath);
-          void supabase.storage.from("profile-photos").createSignedUrl(storedPath, 3600).then(({ data: signed }) => {
-            if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
-          });
+          void (async () => {
+            for (let attempt = 0; attempt < 2; attempt += 1) {
+              const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(String(storedPath), 3600);
+              if (signed?.signedUrl) { setAvatarPreview(signed.signedUrl); return; }
+              await new Promise((resolve) => window.setTimeout(resolve, 500));
+            }
+          })();
         }
         // Documentos são carregados separadamente; uma falha nessa tabela não
         // pode impedir o restante da conta de abrir no celular.
@@ -96,9 +100,16 @@ export default function ProfilePage() {
       const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(nextAvatarPath, 3600);
       if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
     }
-    const { error: updateError } = await supabase.auth.updateUser({ data: { full_name: name.trim(), birth_date: birthDate || null, avatar_path: nextAvatarPath, intestinal_history: intestinalHistory.trim() } });
+    const { data: updatedData, error: updateError } = await supabase.auth.updateUser({ data: { full_name: name.trim(), birth_date: birthDate || null, avatar_path: nextAvatarPath, intestinal_history: intestinalHistory.trim() } });
     if (updateError) setError(updateError.message);
-    else { setAvatarPath(nextAvatarPath); setAvatarFile(null); setMessage("Dados da conta atualizados."); }
+    else {
+      // Confirma que o metadata atualizado foi incorporado à sessão persistida.
+      const persistedPath = updatedData.user?.user_metadata?.avatar_path;
+      setUser(updatedData.user ?? user);
+      setAvatarPath(typeof persistedPath === "string" ? persistedPath : nextAvatarPath);
+      setAvatarFile(null);
+      setMessage("Dados da conta atualizados.");
+    }
     setBusy(false);
   }
 
