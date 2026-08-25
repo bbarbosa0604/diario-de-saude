@@ -196,14 +196,24 @@ export default function Home() {
     }
     async function load() {
       try {
-        const { data, error } = await Promise.race([
-          client.auth.getUser(),
-          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 10000)),
+        // Recupera a sessão persistida primeiro. Em Chrome mobile, getUser pode
+        // aguardar a rede mesmo com uma sessão válida já salva no navegador.
+        const sessionResult = await Promise.race([
+          client.auth.getSession(),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("session-timeout")), 8000)),
         ]);
-        if (error || !data.user) { setUser(null); setEvents([]); setAuthLoading(false); return; }
+        let account = sessionResult.data.session?.user ?? null;
+        if (!account) {
+          const userResult = await Promise.race([
+            client.auth.getUser(),
+            new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("user-timeout")), 8000)),
+          ]);
+          account = userResult.data.user ?? null;
+        }
+        if (!account) { setUser(null); setEvents([]); setAuthLoading(false); return; }
         if (!mounted) return;
-        setUser(data.user); setEvents([]); setAuthError(null);
-        await loadEvents(data.user.id);
+        setUser(account); setEvents([]); setAuthError(null);
+        await loadEvents(account.id);
       } catch {
         if (mounted) setAuthError("Não foi possível carregar seus registros. Verifique a conexão e tente novamente.");
       } finally { if (mounted) setAuthLoading(false); }
