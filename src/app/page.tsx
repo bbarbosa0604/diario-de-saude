@@ -292,6 +292,9 @@ export default function Home() {
   if (configured && !authLoading && !user) return <LandingPage />;
 
   async function addEvent(event: TimelineEvent) {
+    // Fecha a modal imediatamente no celular; upload de foto e persistência
+    // continuam em segundo plano e não prendem a interação do usuário.
+    setActiveForm(null);
     const eventWithDate = { ...event, date: selectedDate };
     setEvents((current) => [...current, eventWithDate].sort((a, b) => a.time.localeCompare(b.time)));
     if (supabase && user) {
@@ -326,7 +329,6 @@ export default function Home() {
         }
       }
     }
-    setActiveForm(null);
   }
 
   async function removeEvent(event: TimelineEvent) {
