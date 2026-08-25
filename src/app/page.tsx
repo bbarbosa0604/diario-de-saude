@@ -371,14 +371,26 @@ export default function Home() {
             <p className="text-sm font-semibold text-[#38624c]">{selectedDateLabel}</p>
             <h2 className="mt-1 text-xl font-semibold">Como está seu intestino?</h2>
           </div>
-          <button
-            aria-label="Trocar dia"
-            className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]"
-            onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
-          >
-            ‹ Dia
-          </button>
-          <button type="button" className="ml-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]" onClick={() => setShowDatePicker((open) => !open)} aria-label="Abrir calendário">▣</button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Ver registros de hoje"
+              aria-pressed={selectedDate === today}
+              className={`rounded-full px-3 py-2 text-sm font-semibold transition ${selectedDate === today ? "bg-[#1e6341] text-white" : "bg-white text-[#38624c]"}`}
+              onClick={() => { setSelectedDate(today); setShowDatePicker(false); setActiveFilter(null); }}
+            >
+              Hoje
+            </button>
+            <button
+              type="button"
+              aria-label="Trocar dia"
+              className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]"
+              onClick={() => setSelectedDate((date) => shiftDate(date, -1))}
+            >
+              ‹ Dia
+            </button>
+            <button type="button" className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#38624c]" onClick={() => setShowDatePicker((open) => !open)} aria-label="Abrir calendário">▣</button>
+          </div>
         </div>
         <div className="mt-5 flex items-center gap-3 rounded-2xl bg-white/75 p-4">
           <span className="text-2xl">🟡</span>
