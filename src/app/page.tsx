@@ -168,19 +168,45 @@ export default function Home() {
     if (!supabase) return;
     const client = supabase;
     let mounted = true;
-    async function load() {
-      const { data } = await client.auth.getUser();
-      if (!mounted) return;
-      setUser(data.user ?? null);
-      if (data.user) {
-        setEvents([]);
-        const { data: rows, error } = await client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", data.user.id).order("event_time", { ascending: true });
-        if (error) setAuthError(error.message);
-        else if (rows) setEvents(rows.map(mapDatabaseEvent));
-      } else {
-        setEvents([]);
+    async function fetchEventsDirect(userId: string) {
+      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      const { data: sessionData } = await client.auth.getSession();
+      if (!baseUrl || !publishableKey || !sessionData.session) throw new Error("session");
+      const query = new URLSearchParams({ select: "id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path", user_id: `eq.${userId}`, order: "event_time.asc" });
+      const response = await fetch(`${baseUrl}/rest/v1/health_events?${query.toString()}`, { headers: { apikey: publishableKey, Authorization: `Bearer ${sessionData.session.access_token}` }, cache: "no-store" });
+      if (!response.ok) throw new Error(`REST ${response.status}`);
+      return await response.json() as Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }>;
+    }
+    async function loadEvents(userId: string) {
+      let result: { data: Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }> | null; error: { message: string } | null };
+      try {
+        result = await Promise.race([
+          client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", userId).order("event_time", { ascending: true }),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 8000)),
+        ]);
+      } catch {
+        const rows = await fetchEventsDirect(userId);
+        if (mounted) setEvents(rows.map(mapDatabaseEvent));
+        return;
       }
-      setAuthLoading(false);
+      if (!mounted) return;
+      if (result.error) throw new Error(result.error.message);
+      setEvents((result.data ?? []).map(mapDatabaseEvent));
+    }
+    async function load() {
+      try {
+        const { data, error } = await Promise.race([
+          client.auth.getUser(),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 10000)),
+        ]);
+        if (error || !data.user) { setUser(null); setEvents([]); setAuthLoading(false); return; }
+        if (!mounted) return;
+        setUser(data.user); setEvents([]); setAuthError(null);
+        await loadEvents(data.user.id);
+      } catch {
+        if (mounted) setAuthError("Não foi possível carregar seus registros. Verifique a conexão e tente novamente.");
+      } finally { if (mounted) setAuthLoading(false); }
     }
     void load();
     const { data: authSubscription } = client.auth.onAuthStateChange((_event, session) => {
@@ -188,11 +214,8 @@ export default function Home() {
       setAuthLoading(true);
       if (session?.user) {
         setEvents([]);
-        void client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", session.user.id).order("event_time", { ascending: true }).then(({ data: rows, error }) => {
-          if (error) setAuthError(error.message);
-          else if (rows) setEvents(rows.map(mapDatabaseEvent));
-          setAuthLoading(false);
-        });
+        setAuthError(null);
+        void loadEvents(session.user.id).catch(() => setAuthError("Não foi possível carregar seus registros. Verifique a conexão e tente novamente.")).finally(() => setAuthLoading(false));
       } else {
         setEvents([]);
         setAuthLoading(false);
@@ -284,6 +307,7 @@ export default function Home() {
       </header>
 
       {configured && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Carregando seus registros…</div>}
+      {authError && !authLoading && <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-[#fae8e5] p-4 text-sm text-[#9b4438]"><span>{authError}</span><button type="button" onClick={() => window.location.reload()} className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#9b4438]">Tentar novamente</button></div>}
 
       <section className="mt-7 rounded-[28px] bg-[#e9f3eb] p-5 shadow-[0_8px_30px_rgba(38,81,59,0.08)]">
         <div className="flex items-center justify-between">
