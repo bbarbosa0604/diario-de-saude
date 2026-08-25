@@ -143,7 +143,7 @@ insert into storage.buckets (id, name, public) values ('medical-exams', 'medical
 on conflict (id) do nothing;
 drop policy if exists "Users can upload their own medical documents" on storage.objects;
 create policy "Users can upload their own medical documents" on storage.objects for insert to authenticated
-with check (bucket_id = 'medical-exams' and (storage.foldername(name))[1] = (select auth.jwt()->>'sub'));
+with check (bucket_id = 'medical-exams' and owner_id = (select auth.jwt()->>'sub'));
 drop policy if exists "Users can view their own medical documents" on storage.objects;
 create policy "Users can view their own medical documents" on storage.objects for select to authenticated
 using (bucket_id = 'medical-exams' and owner_id = (select auth.jwt()->>'sub'));
