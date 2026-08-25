@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
-type EventKind = "meal" | "symptom" | "bowel" | "urine" | "tea" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
+type EventKind = "meal" | "symptom" | "bowel" | "urine" | "stress" | "tea" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
 
 type TimelineEvent = {
   id: string;
@@ -74,6 +74,7 @@ const eventOptions: { kind: EventKind; icon: string; label: string; hint: string
   { kind: "meal", icon: "🍽", label: "Refeição", hint: "O que você comeu?" },
   { kind: "bowel", icon: "🚽", label: "Evacuação", hint: "Bristol, urgência e foto" },
   { kind: "urine", icon: "💧", label: "Urina", hint: "Jato, cor e ardência" },
+  { kind: "stress", icon: "🧠", label: "Estresse", hint: "Nível de estresse do dia" },
   { kind: "symptom", icon: "✦", label: "Sintoma", hint: "Cólica, gases ou outro" },
   { kind: "tea", icon: "🍵", label: "Chá", hint: "Tipo e quantidade" },
   { kind: "medication", icon: "💊", label: "Suplementação", hint: "Suplemento, vitamina ou enzima" },
@@ -540,12 +541,14 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
     const streamQuality = String(form.get("streamQuality") || "").trim();
     const urineColor = String(form.get("urineColor") || "").trim();
     const burning = String(form.get("burning") || "").trim();
-    if (!value && kind !== "bowel" && kind !== "urine") return;
+    if (!value && kind !== "bowel" && kind !== "urine" && kind !== "stress") return;
     const item: TimelineEvent =
       kind === "meal"
         ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
         : kind === "bowel"
           ? { id: crypto.randomUUID(), kind, time, title: "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${details ? ` · ${details}` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
+        : kind === "stress"
+          ? { id: crypto.randomUUID(), kind, time, title: "Estresse", detail: `Nível ${intensity}/5${details ? ` · ${details}` : ""}`, badge: intensity ? `${intensity}/5` : undefined }
         : kind === "urine"
           ? { id: crypto.randomUUID(), kind, time, title: "Urina", detail: `Jato: ${streamQuality || "não informado"} · Cor: ${urineColor || "não informada"} · Ardência: ${burning || "não informada"}` }
         : kind === "symptom"
@@ -581,6 +584,11 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         </label><label className="block text-sm font-semibold">Ardência ao urinar
           <ManagedSelect name="burning" storageKey="urine-burning" defaults={["Não", "Leve", "Moderada", "Intensa"]} placeholder="Selecione uma opção" required />
         </label></div>}
+        {kind === "stress" && <div className="mt-4 space-y-4"><label className="block text-sm font-semibold">Nível de estresse (0 a 5)
+          <input name="intensity" required type="number" min="0" max="5" defaultValue="0" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label><label className="block text-sm font-semibold">Observação (opcional)
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: dia mais intenso no trabalho" />
+        </label></div>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <textarea name="value" required placeholder="Ex.: arroz, feijão e abacate" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
@@ -606,7 +614,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Quantidade (ml)
           <input name="intensity" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {!['meal', 'bowel', 'urine', 'symptom', 'tea', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
+        {!['meal', 'bowel', 'urine', 'stress', 'symptom', 'tea', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
