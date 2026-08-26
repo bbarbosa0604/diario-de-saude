@@ -1,7 +1,10 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 function secret() {
-  const value = process.env.MCP_OAUTH_SECRET;
+  // Mantém compatibilidade com instalações já configuradas apenas com a
+  // chave de serviço. Uma variável MCP_OAUTH_SECRET própria continua sendo
+  // preferível quando disponível.
+  const value = process.env.MCP_OAUTH_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!value) throw new Error("MCP_OAUTH_SECRET não configurado");
   return value;
 }
