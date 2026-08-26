@@ -361,7 +361,10 @@ export default function Home() {
           <p className="text-sm font-medium text-[#698076]">Meu Intestino</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Olá, Bruno.</h1>
         </div>
-        <Link href="/profile" aria-label="Minha conta" className="flex items-center gap-2 rounded-full bg-[#e6f1e9] px-3 py-2 text-sm font-semibold text-[#38624c] transition active:scale-95"><span className="text-lg">👤</span><span>Conta</span></Link>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => window.location.reload()} aria-label="Atualizar registros" className="flex items-center gap-1.5 rounded-full border border-[#cbd9ce] bg-white px-3 py-2 text-sm font-semibold text-[#38624c] transition active:scale-95"><span aria-hidden="true">↻</span><span>Atualizar</span></button>
+          <Link href="/profile" aria-label="Minha conta" className="flex items-center gap-2 rounded-full bg-[#e6f1e9] px-3 py-2 text-sm font-semibold text-[#38624c] transition active:scale-95"><span className="text-lg">👤</span><span>Conta</span></Link>
+        </div>
       </header>
 
       {configured && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Carregando seus registros…</div>}
