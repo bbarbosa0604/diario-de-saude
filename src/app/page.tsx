@@ -304,20 +304,12 @@ export default function Home() {
         const { error: uploadError } = await supabase.storage.from("health-event-photos").upload(photoPath, eventWithDate.photoFile, { upsert: false });
         if (uploadError) setAuthError(`Registro criado, mas a foto não foi enviada: ${uploadError.message}`);
       }
-      const { error } = await supabase.from("health_events").insert({
-        id: eventWithDate.id,
-        user_id: user.id,
-        event_date: selectedDate,
-        event_kind: eventWithDate.kind,
-        event_time: eventWithDate.time,
-        title: eventWithDate.title,
-        detail: eventWithDate.detail,
-        badge: eventWithDate.badge ?? null,
-        tags: eventWithDate.tags ?? [],
-        photo_path: photoPath,
-      });
-      if (error) setAuthError(`Não foi possível salvar: ${error.message}`);
-      if (!error && eventWithDate.kind === "bowel" && photoPath) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) { setAuthError("Sua sessão expirou. Entre novamente para salvar o registro."); return; }
+      const saveResponse = await fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ id: eventWithDate.id, event_date: selectedDate, event_kind: eventWithDate.kind, event_time: eventWithDate.time, title: eventWithDate.title, detail: eventWithDate.detail, badge: eventWithDate.badge ?? null, tags: eventWithDate.tags ?? [], photo_path: photoPath }) });
+      const saveResult = await saveResponse.json().catch(() => ({})) as { error?: string };
+      if (!saveResponse.ok) setAuthError(`Não foi possível salvar: ${saveResult.error || `HTTP ${saveResponse.status}`}`);
+      if (saveResponse.ok && eventWithDate.kind === "bowel" && photoPath) {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
           const response = await fetch("/api/ai/classify-bowel-photo", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ eventId: eventWithDate.id, photoPath }) });
