@@ -20,14 +20,18 @@ export function signMcpToken(payload: Record<string, unknown>) {
 }
 
 export function verifyMcpToken(token: string) {
-  const [header, body, signature] = token.split(".");
-  if (!header || !body || !signature) return null;
-  const expected = createHmac("sha256", secret()).update(`${header}.${body}`).digest();
-  const received = Buffer.from(signature, "base64url");
-  if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null;
-  const payload = JSON.parse(decode(body)) as Record<string, unknown>;
-  if (typeof payload.exp !== "number" || payload.exp < Math.floor(Date.now() / 1000)) return null;
-  return payload;
+  try {
+    const [header, body, signature] = token.split(".");
+    if (!header || !body || !signature) return null;
+    const expected = createHmac("sha256", secret()).update(`${header}.${body}`).digest();
+    const received = Buffer.from(signature, "base64url");
+    if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null;
+    const payload = JSON.parse(decode(body)) as Record<string, unknown>;
+    if (typeof payload.exp !== "number" || payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 export function pkceChallenge(verifier: string) {

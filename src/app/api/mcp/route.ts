@@ -8,8 +8,8 @@ function jsonRpc(id: string | number | null, result: unknown) {
   return NextResponse.json({ jsonrpc: "2.0", id, result });
 }
 
-function errorRpc(id: string | number | null, code: number, message: string) {
-  return NextResponse.json({ jsonrpc: "2.0", id, error: { code, message } }, { status: 400 });
+function errorRpc(id: string | number | null, code: number, message: string, status = 200, headers?: HeadersInit) {
+  return NextResponse.json({ jsonrpc: "2.0", id, error: { code, message } }, { status, headers });
 }
 
 function tools() {
@@ -61,7 +61,10 @@ export async function POST(request: Request) {
   if (message.method !== "tools/call") return errorRpc(id, -32601, "Método MCP não suportado.");
 
   const auth = await authenticatedClient(request);
-  if (!auth) return errorRpc(id, -32001, "Autenticação necessária.");
+  if (!auth) {
+    const resourceMetadata = `${new URL(request.url).origin}/.well-known/oauth-protected-resource`;
+    return errorRpc(id, -32001, "Autenticação necessária. Autorize novamente o servidor MCP.", 401, { "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadata}"` });
+  }
   const params = message.params ?? {};
   const name = String(params.name ?? "");
   const args = (params.arguments ?? {}) as Record<string, unknown>;
