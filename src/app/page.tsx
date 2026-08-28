@@ -298,20 +298,21 @@ export default function Home() {
     const eventWithDate = { ...event, date: selectedDate };
     setEvents((current) => [...current, eventWithDate].sort((a, b) => a.time.localeCompare(b.time)));
     if (supabase && user) {
-      let photoPath: string | null = null;
-      if (eventWithDate.photoFile) {
-        photoPath = `${user.id}/${eventWithDate.id}-${eventWithDate.photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
-        const { error: uploadError } = await supabase.storage.from("health-event-photos").upload(photoPath, eventWithDate.photoFile, { upsert: false });
-        if (uploadError) setAuthError(`Registro criado, mas a foto não foi enviada: ${uploadError.message}`);
-      }
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) { setAuthError("Sua sessão expirou. Entre novamente para salvar o registro."); return; }
+      let photoPath: string | null = null;
+      if (eventWithDate.photoFile) {
+        const requestedPath = `${user.id}/${eventWithDate.id}-${eventWithDate.photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+        const photoForm = new FormData(); photoForm.append("file", eventWithDate.photoFile); photoForm.append("path", requestedPath);
+        const photoResponse = await fetch("/api/event-photo", { method: "POST", headers: { Authorization: `Bearer ${sessionData.session.access_token}` }, body: photoForm });
+        if (photoResponse.ok) photoPath = String((await photoResponse.json()).path || requestedPath);
+        else setAuthError("Registro criado, mas a foto não pôde ser enviada. Você pode tentar novamente.");
+      }
       const saveResponse = await fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ id: eventWithDate.id, event_date: selectedDate, event_kind: eventWithDate.kind, event_time: eventWithDate.time, title: eventWithDate.title, detail: eventWithDate.detail, badge: eventWithDate.badge ?? null, tags: eventWithDate.tags ?? [], photo_path: photoPath }) });
       const saveResult = await saveResponse.json().catch(() => ({})) as { error?: string };
       if (!saveResponse.ok) setAuthError(`Não foi possível salvar: ${saveResult.error || `HTTP ${saveResponse.status}`}`);
       if (saveResponse.ok && eventWithDate.kind === "bowel" && photoPath) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
+        {
           const response = await fetch("/api/ai/classify-bowel-photo", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` }, body: JSON.stringify({ eventId: eventWithDate.id, photoPath }) });
           if (!response.ok) setAuthError("Evacuação registrada, mas a classificação da foto pela IA ainda não foi concluída.");
           else {
@@ -588,7 +589,7 @@ function ManagedSelect({ name, storageKey, defaults, placeholder, required = fal
   function addItem() {
     const item = newItem.trim();
     if (!item || options.includes(item)) return;
-    persist([...options, item]); setNewItem(""); setValue(item);
+    persist([...options, item]); setNewItem(""); setValue(item); setManaging(false);
   }
 
   function editItem(item: string) {
