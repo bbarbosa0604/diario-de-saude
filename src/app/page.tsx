@@ -361,7 +361,7 @@ export default function Home() {
         </div>
       </header>
 
-      {configured && authLoading && <div className="mt-5 rounded-2xl bg-white p-4 text-sm text-[#698076]">Carregando seus registros…</div>}
+      {configured && authLoading && <div className="mt-5 flex items-center gap-3 rounded-2xl bg-white p-4 text-sm text-[#698076]" role="status" aria-live="polite"><span className="h-4 w-4 animate-spin rounded-full border-2 border-[#cfe0d1] border-t-[#1b8b6f]" />Carregando seus registros…</div>}
       {authError && !authLoading && <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-[#fae8e5] p-4 text-sm text-[#9b4438]"><span>{authError}</span><button type="button" onClick={() => window.location.reload()} className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#9b4438]">Tentar novamente</button></div>}
 
       <section className="mt-7 rounded-[28px] bg-[#e9f3eb] p-5 shadow-[0_8px_30px_rgba(38,81,59,0.08)]">
@@ -395,7 +395,7 @@ export default function Home() {
           <span className="text-2xl">🟡</span>
           <div>
             <p className="font-semibold">Resumo inteligente do dia</p>
-            <p className="mt-0.5 text-sm leading-snug text-[#698076]">{gutSummary(dayEvents)}</p>
+            <p className="mt-0.5 text-sm leading-snug text-[#698076]">{authLoading ? "Aguarde enquanto buscamos seus registros…" : gutSummary(dayEvents)}</p>
             <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void evaluateDay()} disabled={aiBusy || aiLocked} className="rounded-full bg-[#1e6341] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{aiBusy ? "Recriando análise…" : aiLocked ? "Avaliação realizada hoje" : "✦ Avaliar meu dia"}</button><button type="button" onClick={() => void exportDayData()} className="rounded-full border border-[#b9cfc0] bg-white px-4 py-2 text-xs font-semibold text-[#39734f]">⇩ Exportar dados</button></div>
           </div>
         </div>
@@ -438,7 +438,7 @@ export default function Home() {
           {dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).map((event) => (
             <TimelineCard event={event} key={event.id} onEdit={() => setEditingEvent(event)} onDelete={() => void removeEvent(event)} />
           ))}
-          {dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).length === 0 && <div className="rounded-2xl border border-dashed border-[#cbd9ce] p-5 text-center text-sm text-[#698076]">Nenhum registro nesta categoria para este dia.</div>}
+          {!authLoading && dayEvents.filter((event) => !activeFilter || event.kind === activeFilter).length === 0 && <div className="rounded-2xl border border-dashed border-[#cbd9ce] p-5 text-center text-sm text-[#698076]">Nenhum registro nesta categoria para este dia.</div>}
         </div>
       </section>
 
