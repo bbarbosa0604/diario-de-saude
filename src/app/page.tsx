@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase";
 
-type EventKind = "meal" | "symptom" | "bowel" | "urine" | "stress" | "tea" | "medication" | "water" | "weight" | "sleep" | "exercise" | "note";
+type EventKind = "meal" | "symptom" | "bowel" | "urine" | "stress" | "tea" | "medication" | "water" | "weight" | "sleep" | "exercise" | "natural_treatment";
 
 type TimelineEvent = {
   id: string;
@@ -91,7 +91,7 @@ const eventOptions: { kind: EventKind; icon: string; label: string; hint: string
   { kind: "weight", icon: "⚖", label: "Peso", hint: "Medição do dia" },
   { kind: "sleep", icon: "☾", label: "Sono", hint: "Como você dormiu" },
   { kind: "exercise", icon: "🏃", label: "Atividade", hint: "Movimento ou exercício" },
-  { kind: "note", icon: "📝", label: "Nota", hint: "Outro evento importante" },
+  { kind: "natural_treatment", icon: "🌿", label: "Tratamento natural", hint: "Escalda-pés, banho de tronco ou assento" },
 ];
 
 export default function Home() {
@@ -616,6 +616,7 @@ function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; stor
   const [managing, setManaging] = useState(false);
   const [newItem, setNewItem] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [frequencies, setFrequencies] = useState<Record<string, string>>({});
 
   useEffect(() => {
     try {
@@ -655,7 +656,7 @@ function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; stor
   }
 
   const filteredOptions = options.filter((option) => option.toLocaleLowerCase().includes(searchTerm.trim().toLocaleLowerCase()));
-  return <div className="mt-2"><div className="rounded-2xl border border-[#dce5dd] bg-white p-3"><p className="text-xs leading-relaxed text-[#698076]">Marque um ou mais suplementos que você tomou.</p><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Pesquisar suplemento" aria-label="Pesquisar suplemento" className="mt-3 block w-full rounded-xl border border-[#dce5dd] bg-[#fcfcf9] px-3 py-2.5 text-sm outline-none focus:border-[#6ba27d]" /><div className="mt-3 max-h-52 space-y-2 overflow-y-auto overscroll-contain pr-1">{filteredOptions.length ? filteredOptions.map((option) => <label key={option} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-[#f3f8f3]"><span className="flex min-w-0 items-center gap-3"><input name={name} type="checkbox" value={option} checked={selected.includes(option)} onChange={() => setSelected((current) => current.includes(option) ? current.filter((item) => item !== option) : [...current, option])} className="h-4 w-4 shrink-0 accent-[#1e6341]" /><span className="truncate text-sm font-medium">{option}</span></span><span className="flex shrink-0 gap-2"><button type="button" onClick={(event) => { event.preventDefault(); editItem(option); }} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={(event) => { event.preventDefault(); deleteItem(option); }} className="text-xs text-[#a34a3d]">Excluir</button></span></label>) : <p className="px-2 py-3 text-sm text-[#698076]">Nenhum suplemento encontrado.</p>}</div></div><button type="button" onClick={() => setManaging((open) => !open)} className="mt-2 rounded-xl border border-[#b9cfc0] px-3 py-2 text-xs font-semibold text-[#39734f]">{managing ? "Fechar cadastro" : "Cadastrar suplemento"}</button>{managing && <div className="mt-2 flex gap-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Ex.: Magnésio" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div>}</div>;
+  return <div className="mt-2"><div className="rounded-2xl border border-[#dce5dd] bg-white p-3"><p className="text-xs leading-relaxed text-[#698076]">Marque um ou mais suplementos e informe a frequência diária.</p><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Pesquisar suplemento" aria-label="Pesquisar suplemento" className="mt-3 block w-full rounded-xl border border-[#dce5dd] bg-[#fcfcf9] px-3 py-2.5 text-sm outline-none focus:border-[#6ba27d]" /><div className="mt-3 max-h-52 space-y-2 overflow-y-auto overscroll-contain pr-1">{filteredOptions.length ? filteredOptions.map((option) => <div key={option} className="rounded-xl px-2 py-2 hover:bg-[#f3f8f3]"><div className="flex items-center justify-between gap-3"><label className="flex min-w-0 cursor-pointer items-center gap-3"><input name={name} type="checkbox" value={option} checked={selected.includes(option)} onChange={() => setSelected((current) => current.includes(option) ? current.filter((item) => item !== option) : [...current, option])} className="h-4 w-4 shrink-0 accent-[#1e6341]" /><span className="truncate text-sm font-medium">{option}</span></label><span className="flex shrink-0 gap-2"><button type="button" onClick={(event) => { event.preventDefault(); editItem(option); }} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={(event) => { event.preventDefault(); deleteItem(option); }} className="text-xs text-[#a34a3d]">Excluir</button></span></div>{selected.includes(option) && <div className="ml-7 mt-2 flex items-center gap-2 text-xs text-[#698076]"><input type="number" min="1" max="24" step="1" value={frequencies[option] || "1"} onChange={(event) => setFrequencies((current) => ({ ...current, [option]: event.target.value }))} aria-label={`Frequência diária de ${option}`} className="w-20 rounded-lg border border-[#dce5dd] bg-white px-2 py-1.5 text-sm text-[#18342b]" /><span>vez(es) por dia</span><input type="hidden" name="supplementDetails" value={`${option} — ${frequencies[option] || "1"} vez(es)/dia`} /></div>}</div>) : <p className="px-2 py-3 text-sm text-[#698076]">Nenhum suplemento encontrado.</p>}</div></div><button type="button" onClick={() => setManaging((open) => !open)} className="mt-2 rounded-xl border border-[#b9cfc0] px-3 py-2 text-xs font-semibold text-[#39734f]">{managing ? "Fechar cadastro" : "Cadastrar suplemento"}</button>{managing && <div className="mt-2 flex gap-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Ex.: Magnésio" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div>}</div>;
 }
 
 function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => void; onSave: (event: TimelineEvent) => void }) {
@@ -680,12 +681,15 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
       .slice(0, 6);
     const category = String(form.get("category") || "").trim();
     const supplements = form.getAll("supplements").map(String).filter(Boolean);
+    const supplementDetails = form.getAll("supplementDetails").map(String).filter(Boolean);
+    const treatmentType = String(form.get("treatmentType") || "").trim();
 
     const streamQuality = String(form.get("streamQuality") || "").trim();
     const urineColor = String(form.get("urineColor") || "").trim();
     const burning = String(form.get("burning") || "").trim();
-    if (!value && kind !== "bowel" && kind !== "urine" && kind !== "stress" && kind !== "medication") return;
+    if (!value && kind !== "bowel" && kind !== "urine" && kind !== "stress" && kind !== "medication" && kind !== "natural_treatment") return;
     if (kind === "medication" && supplements.length === 0) return;
+    if (kind === "natural_treatment" && !treatmentType) return;
     const item: TimelineEvent =
       kind === "meal"
         ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
@@ -704,7 +708,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
             : kind === "tea"
               ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity} ml` }
               : kind === "medication"
-                ? { id: crypto.randomUUID(), kind, time, title: supplements.length === 1 ? supplements[0] : "Suplementos", detail: supplements.join(", "), tags: supplements.map((supplement) => supplement.toLowerCase()) }
+                ? { id: crypto.randomUUID(), kind, time, title: "Suplementação", detail: supplementDetails.join(", ") || supplements.join(", "), tags: supplements.map((supplement) => supplement.toLowerCase()) }
+              : kind === "natural_treatment"
+                ? { id: crypto.randomUUID(), kind, time, title: treatmentType, detail: details || value || "Tratamento natural registrado" }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
     onSave(item);
   }
@@ -746,6 +752,11 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "medication" && <label className="mt-4 block text-sm font-semibold">Seus suplementos
           <ManagedMultiSelect name="supplements" storageKey="supplements" defaults={["Probiótico", "Magnésio", "Vitamina D", "Ômega 3", "Glutamina", "Enzima digestiva"]} />
         </label>}
+        {kind === "natural_treatment" && <div className="mt-4 space-y-4"><label className="block text-sm font-semibold">Tipo de tratamento
+          <ManagedSelect name="treatmentType" storageKey="natural-treatments" defaults={["Escalda-pés", "Banho de tronco", "Banho de assento"]} placeholder="Selecione o tratamento" required />
+        </label><label className="block text-sm font-semibold">Descrição
+          <textarea name="details" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Como foi realizado, duração ou observações" />
+        </label></div>}
         {kind === "water" && <label className="mt-4 block text-sm font-semibold">Quantidade de água (ml)
           <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
@@ -761,7 +772,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Quantidade (ml)
           <input name="intensity" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
-        {!['meal', 'bowel', 'urine', 'stress', 'symptom', 'tea', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
+        {!['meal', 'bowel', 'urine', 'stress', 'symptom', 'tea', 'medication', 'natural_treatment', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
