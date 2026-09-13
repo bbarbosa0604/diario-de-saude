@@ -32,6 +32,15 @@ function localDateString(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function localTimeString(date = new Date()) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 function shiftDate(date: string, days: number) {
   const value = new Date(`${date}T12:00:00`);
   value.setDate(value.getDate() + days);
@@ -84,14 +93,6 @@ const eventOptions: { kind: EventKind; icon: string; label: string; hint: string
   { kind: "exercise", icon: "🏃", label: "Atividade", hint: "Movimento ou exercício" },
   { kind: "note", icon: "📝", label: "Nota", hint: "Outro evento importante" },
 ];
-
-function timeNow() {
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date());
-}
 
 export default function Home() {
   const router = useRouter();
@@ -150,7 +151,7 @@ export default function Home() {
       `Data: ${selectedDate}`,
       "",
       "EVENTOS REGISTRADOS:",
-      ...(dayEvents.length ? dayEvents.sort((a, b) => a.time.localeCompare(b.time)).map((event) => `- ${event.time} | ${event.kind} | ${event.title} | ${event.detail}${event.tags?.length ? ` | tags: ${event.tags.join(", ")}` : ""}`) : ["Nenhum evento registrado."]),
+      ...(dayEvents.length ? dayEvents.map((event) => `- ${event.kind} | ${event.title} | ${event.detail}${event.tags?.length ? ` | tags: ${event.tags.join(", ")}` : ""}`) : ["Nenhum evento registrado."]),
       "",
       "Observação: estes dados são registros pessoais e não representam um diagnóstico médico.",
     ];
@@ -177,7 +178,7 @@ export default function Home() {
         accessToken = sessionData.session?.access_token;
       }
       if (!baseUrl || !publishableKey || !accessToken) throw new Error("session");
-      const query = new URLSearchParams({ select: "id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path", user_id: `eq.${userId}`, order: "event_time.asc" });
+      const query = new URLSearchParams({ select: "id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path", user_id: `eq.${userId}`, order: "created_at.asc" });
       const response = await fetch(`${baseUrl}/rest/v1/health_events?${query.toString()}`, { headers: { apikey: publishableKey, Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
       if (!response.ok) throw new Error(`REST ${response.status}`);
       return await response.json() as Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }>;
@@ -220,7 +221,7 @@ export default function Home() {
       let result: { data: Array<{ id: string; event_date: string; event_kind: EventKind; event_time: string; title: string; detail: string; badge: string | null; tags: string[] | null; photo_path?: string | null }> | null; error: { message: string } | null };
       try {
         result = await Promise.race([
-          client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", userId).order("event_time", { ascending: true }),
+          client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", userId).order("created_at", { ascending: true }),
           new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error("timeout")), 8000)),
         ]);
       } catch {
@@ -296,7 +297,7 @@ export default function Home() {
     // continuam em segundo plano e não prendem a interação do usuário.
     setActiveForm(null);
     const eventWithDate = { ...event, date: selectedDate };
-    setEvents((current) => [...current, eventWithDate].sort((a, b) => a.time.localeCompare(b.time)));
+    setEvents((current) => [...current, eventWithDate]);
     if (supabase && user) {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) { setAuthError("Sua sessão expirou. Entre novamente para salvar o registro."); return; }
@@ -340,10 +341,10 @@ export default function Home() {
 
   async function updateEvent(event: TimelineEvent) {
     if (supabase && user) {
-      const { error } = await supabase.from("health_events").update({ event_time: event.time, title: event.title, detail: event.detail }).eq("id", event.id).eq("user_id", user.id);
+      const { error } = await supabase.from("health_events").update({ title: event.title, detail: event.detail }).eq("id", event.id).eq("user_id", user.id);
       if (error) { setAuthError(`Não foi possível editar: ${error.message}`); return; }
     }
-    setEvents((current) => current.map((item) => item.id === event.id ? event : item).sort((a, b) => a.time.localeCompare(b.time)));
+    setEvents((current) => current.map((item) => item.id === event.id ? event : item));
     setEditingEvent(null);
   }
 
@@ -534,7 +535,6 @@ function TimelineCard({ event, onEdit, onDelete }: { event: TimelineEvent; onEdi
 
   return (
     <article className="flex gap-3 rounded-2xl border border-[#e8ece8] bg-white p-4 shadow-[0_5px_16px_rgba(32,62,45,0.04)]">
-      <time className="w-10 pt-1 text-sm font-semibold text-[#527063]">{event.time}</time>
       <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${color}`}>{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
@@ -577,7 +577,10 @@ function ManagedSelect({ name, storageKey, defaults, placeholder, required = fal
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(`meuintestino:${storageKey}`) || "null");
-      if (Array.isArray(saved)) setOptions([...new Set(saved.map(String))]);
+      if (Array.isArray(saved)) {
+        const timer = window.setTimeout(() => setOptions([...new Set(saved.map(String))]), 0);
+        return () => window.clearTimeout(timer);
+      }
     } catch { /* usa as opções padrão */ }
   }, [storageKey]);
 
@@ -607,6 +610,52 @@ function ManagedSelect({ name, storageKey, defaults, placeholder, required = fal
   return <div className="mt-2"><div className="flex gap-2"><select name={name} required={required} value={value} onChange={(event) => setValue(event.target.value)} className="block min-w-0 flex-1 rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base"><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><button type="button" onClick={() => setManaging((open) => !open)} className="rounded-xl border border-[#b9cfc0] px-3 text-xs font-semibold text-[#39734f]">Gerenciar</button></div>{managing && <div className="mt-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><div className="flex gap-2"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Novo item" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div><div className="mt-3 space-y-2">{options.map((option) => <div key={option} className="flex items-center justify-between gap-2 text-sm"><span className="truncate">{option}</span><span className="flex gap-2"><button type="button" onClick={() => editItem(option)} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={() => deleteItem(option)} className="text-xs text-[#a34a3d]">Excluir</button></span></div>)}</div></div>}</div>;
 }
 
+function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; storageKey: string; defaults: string[] }) {
+  const [options, setOptions] = useState(defaults);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [managing, setManaging] = useState(false);
+  const [newItem, setNewItem] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`meuintestino:${storageKey}`) || "null");
+      if (Array.isArray(saved)) {
+        const timer = window.setTimeout(() => setOptions([...new Set(saved.map(String))]), 0);
+        return () => window.clearTimeout(timer);
+      }
+    } catch { /* usa as opções padrão */ }
+  }, [storageKey]);
+
+  function persist(next: string[]) {
+    setOptions(next);
+    localStorage.setItem(`meuintestino:${storageKey}`, JSON.stringify(next));
+  }
+
+  function addItem() {
+    const item = newItem.trim();
+    if (!item || options.includes(item)) return;
+    persist([...options, item]);
+    setSelected((current) => [...current, item]);
+    setNewItem("");
+    setManaging(false);
+  }
+
+  function editItem(item: string) {
+    const next = window.prompt("Editar suplemento", item)?.trim();
+    if (!next || next === item || options.includes(next)) return;
+    persist(options.map((option) => option === item ? next : option));
+    setSelected((current) => current.map((selectedItem) => selectedItem === item ? next : selectedItem));
+  }
+
+  function deleteItem(item: string) {
+    if (!window.confirm(`Excluir “${item}” dos seus suplementos?`)) return;
+    persist(options.filter((option) => option !== item));
+    setSelected((current) => current.filter((selectedItem) => selectedItem !== item));
+  }
+
+  return <div className="mt-2"><div className="rounded-2xl border border-[#dce5dd] bg-white p-3"><p className="text-xs leading-relaxed text-[#698076]">Marque um ou mais suplementos que você tomou.</p><div className="mt-3 space-y-2">{options.map((option) => <label key={option} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-2 py-2 hover:bg-[#f3f8f3]"><span className="flex items-center gap-3"><input name={name} type="checkbox" value={option} checked={selected.includes(option)} onChange={() => setSelected((current) => current.includes(option) ? current.filter((item) => item !== option) : [...current, option])} className="h-4 w-4 accent-[#1e6341]" /><span className="text-sm font-medium">{option}</span></span><span className="flex gap-2"><button type="button" onClick={(event) => { event.preventDefault(); editItem(option); }} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={(event) => { event.preventDefault(); deleteItem(option); }} className="text-xs text-[#a34a3d]">Excluir</button></span></label>)}</div></div><button type="button" onClick={() => setManaging((open) => !open)} className="mt-2 rounded-xl border border-[#b9cfc0] px-3 py-2 text-xs font-semibold text-[#39734f]">{managing ? "Fechar cadastro" : "Cadastrar suplemento"}</button>{managing && <div className="mt-2 flex gap-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Ex.: Magnésio" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div>}</div>;
+}
+
 function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => void; onSave: (event: TimelineEvent) => void }) {
   const title = `Registrar ${eventOptions.find((option) => option.kind === kind)?.label.toLowerCase() || "evento"}`;
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -616,7 +665,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const time = String(form.get("time") || timeNow());
+    // O horário continua sendo salvo para ordenar a linha do tempo,
+    // mas é capturado automaticamente no momento do registro.
+    const time = localTimeString();
     const value = String(form.get("value") || "").trim();
     const intensity = String(form.get("intensity") || "");
     const details = String(form.get("details") || "").trim();
@@ -626,11 +677,13 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
       .filter(Boolean)
       .slice(0, 6);
     const category = String(form.get("category") || "").trim();
+    const supplements = form.getAll("supplements").map(String).filter(Boolean);
 
     const streamQuality = String(form.get("streamQuality") || "").trim();
     const urineColor = String(form.get("urineColor") || "").trim();
     const burning = String(form.get("burning") || "").trim();
-    if (!value && kind !== "bowel" && kind !== "urine" && kind !== "stress") return;
+    if (!value && kind !== "bowel" && kind !== "urine" && kind !== "stress" && kind !== "medication") return;
+    if (kind === "medication" && supplements.length === 0) return;
     const item: TimelineEvent =
       kind === "meal"
         ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
@@ -648,6 +701,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
               ? { id: crypto.randomUUID(), kind, time, title: category || "Atividade", detail: `${value} ${Number(value) === 1 ? "minuto" : "minutos"}` }
             : kind === "tea"
               ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity} ml` }
+              : kind === "medication"
+                ? { id: crypto.randomUUID(), kind, time, title: supplements.length === 1 ? supplements[0] : "Suplementos", detail: supplements.join(", "), tags: supplements.map((supplement) => supplement.toLowerCase()) }
             : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
     onSave(item);
   }
@@ -660,9 +715,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
           <h2 className="text-xl font-semibold">{title}</h2>
           <button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-semibold text-[#527063]">Cancelar</button>
         </div>
-        <label className="mt-5 block text-sm font-semibold">Horário
-          <input name="time" type="time" defaultValue={timeNow()} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
-        </label>
+        <p className="mt-3 rounded-xl bg-[#e9f3eb] px-3 py-2 text-xs font-normal text-[#527063]">O horário atual será registrado automaticamente.</p>
         {(kind === "meal" || kind === "exercise") && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
           <ManagedSelect name="category" storageKey={`${kind}-categories`} defaults={kind === "meal" ? ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"] : ["Caminhada", "Corrida", "Musculação"]} placeholder="Sem categoria" />
         </label>}
@@ -687,6 +740,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         </label>}
         {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Tipo de chá
           <ManagedSelect name="value" storageKey="tea-types" defaults={["Camomila", "Hortelã", "Erva-doce", "Gengibre", "Verde", "Preto", "Outro"]} placeholder="Selecione o chá" />
+        </label>}
+        {kind === "medication" && <label className="mt-4 block text-sm font-semibold">Seus suplementos
+          <ManagedMultiSelect name="supplements" storageKey="supplements" defaults={["Probiótico", "Magnésio", "Vitamina D", "Ômega 3", "Glutamina", "Enzima digestiva"]} />
         </label>}
         {kind === "water" && <label className="mt-4 block text-sm font-semibold">Quantidade de água (ml)
           <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
@@ -747,15 +803,13 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
 }
 
 function EditEventForm({ event, onClose, onSave }: { event: TimelineEvent; onClose: () => void; onSave: (event: TimelineEvent) => void }) {
-  const [time, setTime] = useState(event.time);
   const [title, setTitle] = useState(event.title);
   const [detail, setDetail] = useState(event.detail);
   return <div className="fixed inset-0 z-20 flex items-end bg-[#18342b]/25" role="dialog" aria-modal="true" aria-label="Editar registro">
-    <form onSubmit={(formEvent) => { formEvent.preventDefault(); onSave({ ...event, time, title: title.trim() || event.title, detail: detail.trim() }); }} className="w-full rounded-t-[30px] bg-[#fcfcf9] px-5 pb-8 pt-4 shadow-2xl">
+    <form onSubmit={(formEvent) => { formEvent.preventDefault(); onSave({ ...event, title: title.trim() || event.title, detail: detail.trim() }); }} className="w-full rounded-t-[30px] bg-[#fcfcf9] px-5 pb-8 pt-4 shadow-2xl">
       <div className="mx-auto h-1.5 w-10 rounded-full bg-[#d3ddd5]" />
       <div className="mt-5 flex items-center justify-between"><div><p className="text-sm text-[#698076]">Editar registro</p><h2 className="text-xl font-semibold">{event.title}</h2></div><button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-semibold text-[#527063]">Cancelar</button></div>
-      <label className="mt-5 block text-sm font-semibold">Horário<input required type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
-      <label className="mt-4 block text-sm font-semibold">Título<input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+      <label className="mt-5 block text-sm font-semibold">Título<input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
       <label className="mt-4 block text-sm font-semibold">Detalhes<textarea value={detail} onChange={(e) => setDetail(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
       <button className="mt-6 w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">Salvar edição</button>
     </form>
