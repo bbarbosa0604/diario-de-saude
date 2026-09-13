@@ -617,6 +617,7 @@ function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; stor
   const [newItem, setNewItem] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [frequencies, setFrequencies] = useState<Record<string, string>>({});
+  const [supplementSchedules, setSupplementSchedules] = useState<Record<string, string>>({});
 
   useEffect(() => {
     try {
@@ -627,6 +628,13 @@ function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; stor
       }
     } catch { /* usa as opções padrão */ }
   }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("meuintestino:supplement-schedules") || "{}");
+      if (saved && typeof saved === "object") { setSupplementSchedules(saved); setFrequencies(saved); }
+    } catch { /* usa horários vazios */ }
+  }, []);
 
   function persist(next: string[]) {
     setOptions(next);
@@ -643,10 +651,19 @@ function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; stor
   }
 
   function editItem(item: string) {
-    const next = window.prompt("Editar suplemento", item)?.trim();
-    if (!next || next === item || options.includes(next)) return;
-    persist(options.map((option) => option === item ? next : option));
-    setSelected((current) => current.map((selectedItem) => selectedItem === item ? next : selectedItem));
+    const next = window.prompt("Nome do suplemento", item)?.trim();
+    if (!next || options.some((option) => option !== item && option === next)) return;
+    if (next !== item) {
+      persist(options.map((option) => option === item ? next : option));
+      setSelected((current) => current.map((selectedItem) => selectedItem === item ? next : selectedItem));
+    }
+    const schedule = window.prompt("Horário ou frequência de uso", supplementSchedules[item] || "")?.trim() || "";
+    const nextSchedules = { ...supplementSchedules };
+    delete nextSchedules[item];
+    nextSchedules[next] = schedule;
+    setSupplementSchedules(nextSchedules);
+    setFrequencies((current) => ({ ...current, [next]: schedule }));
+    localStorage.setItem("meuintestino:supplement-schedules", JSON.stringify(nextSchedules));
   }
 
   function deleteItem(item: string) {
