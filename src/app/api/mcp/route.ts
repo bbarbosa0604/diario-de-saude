@@ -19,6 +19,7 @@ function tools() {
     { name: "get_period_report", description: "Gera estatísticas estruturadas dos registros do usuário em um período.", inputSchema: { type: "object", properties: { startDate: { type: "string" }, endDate: { type: "string" } }, required: ["startDate", "endDate"] }, annotations: { readOnlyHint: true } },
     { name: "get_medical_exams", description: "Lista os exames e documentos privados cadastrados pelo usuário.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true } },
     { name: "get_intestinal_history", description: "Consulta o histórico intestinal informado pelo usuário no perfil.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true } },
+    { name: "create_event", description: "Cria um registro na linha do tempo do usuário autenticado.", inputSchema: { type: "object", properties: { date: { type: "string", description: "Data no formato YYYY-MM-DD" }, eventKind: { type: "string", enum: ["meal", "symptom", "bowel", "urine", "stress", "tea", "medication", "water", "weight", "sleep", "exercise", "natural_treatment"] }, title: { type: "string" }, detail: { type: "string" }, eventTime: { type: "string", description: "Horário opcional no formato HH:mm" }, badge: { type: "string" }, tags: { type: "array", items: { type: "string" } } }, required: ["date", "eventKind", "title"], additionalProperties: false }, annotations: { readOnlyHint: false } },
   ];
 }
 
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
 
   if (name === "get_daily_events") {
     if (!validDate(args.date)) return errorRpc(id, -32602, "Informe date no formato YYYY-MM-DD.");
-    const { data, error } = await auth.client.from("health_events").select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").eq("user_id", auth.user.id).eq("event_date", args.date).order("event_time", { ascending: true });
+    const { data, error } = await auth.client.from("health_events").select("id,event_date,event_kind,title,detail,badge,tags,photo_path").eq("user_id", auth.user.id).eq("event_date", args.date).order("created_at", { ascending: true });
     if (error) return errorRpc(id, -32000, "Não foi possível consultar os eventos.");
     return jsonRpc(id, { content: [{ type: "text", text: JSON.stringify({ date: args.date, events: data ?? [] }, null, 2) }] });
   }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
   }
   if (name === "get_period_report") {
     if (!validDate(args.startDate) || !validDate(args.endDate)) return errorRpc(id, -32602, "Informe startDate e endDate no formato YYYY-MM-DD.");
-    const { data, error } = await auth.client.from("health_events").select("event_date,event_kind,event_time,title,detail,badge,tags").eq("user_id", auth.user.id).gte("event_date", args.startDate).lte("event_date", args.endDate).order("event_date", { ascending: true }).order("event_time", { ascending: true });
+    const { data, error } = await auth.client.from("health_events").select("event_date,event_kind,title,detail,badge,tags").eq("user_id", auth.user.id).gte("event_date", args.startDate).lte("event_date", args.endDate).order("event_date", { ascending: true }).order("created_at", { ascending: true });
     if (error) return errorRpc(id, -32000, "Não foi possível gerar o relatório.");
     const events = data ?? [];
     const byKind = Object.fromEntries([...new Set(events.map((event) => event.event_kind))].map((kind) => [kind, events.filter((event) => event.event_kind === kind).length]));
@@ -102,6 +103,15 @@ export async function POST(request: Request) {
   if (name === "get_intestinal_history") {
     const history = typeof auth.user.user_metadata?.intestinal_history === "string" ? auth.user.user_metadata.intestinal_history : "";
     return jsonRpc(id, textResult({ history: history || null, available: Boolean(history), note: "Este texto é um contexto pessoal informado pelo usuário e não representa diagnóstico médico." }));
+  }
+  if (name === "create_event") {
+    const validKinds = ["meal", "symptom", "bowel", "urine", "stress", "tea", "medication", "water", "weight", "sleep", "exercise", "natural_treatment"];
+    if (!validDate(args.date) || typeof args.eventKind !== "string" || !validKinds.includes(args.eventKind) || typeof args.title !== "string" || !args.title.trim()) return errorRpc(id, -32602, "Informe date, eventKind e title válidos.");
+    const eventTime = typeof args.eventTime === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(args.eventTime) ? args.eventTime : "00:00";
+    const tags = Array.isArray(args.tags) ? args.tags.filter((tag): tag is string => typeof tag === "string").slice(0, 20) : [];
+    const { data, error } = await auth.client.from("health_events").insert({ id: crypto.randomUUID(), user_id: auth.user.id, event_date: args.date, event_kind: args.eventKind, event_time: eventTime, title: args.title.trim().slice(0, 200), detail: typeof args.detail === "string" ? args.detail.trim().slice(0, 2000) : "", badge: typeof args.badge === "string" ? args.badge.trim().slice(0, 40) : null, tags }).select("id,event_date,event_kind,event_time,title,detail,badge,tags,photo_path").single();
+    if (error) return errorRpc(id, -32000, "Não foi possível criar o registro.");
+    return jsonRpc(id, textResult({ event: data, note: "Registro criado somente na conta autenticada que autorizou este MCP." }));
   }
   return errorRpc(id, -32602, "Ferramenta MCP não encontrada.");
 }
