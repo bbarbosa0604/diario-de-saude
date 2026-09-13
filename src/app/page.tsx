@@ -418,12 +418,12 @@ export default function Home() {
             <h2 className="text-xl font-semibold">Seu resumo</h2>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          {eventOptions.map((option) => {
-            const count = dayEvents.filter((event) => event.kind === option.kind).length;
-            return <Metric key={option.kind} value={count} label={option.label} icon={option.icon} active={activeFilter === option.kind} onClick={() => setActiveFilter(activeFilter === option.kind ? null : option.kind)} />;
-          })}
-        </div>
+        <label className="mt-4 block text-sm font-semibold text-[#38624c]">Filtrar registros
+          <select value={activeFilter || ""} onChange={(event) => setActiveFilter((event.target.value || null) as EventKind | null)} className="mt-2 block w-full rounded-2xl border border-[#dce5dd] bg-white px-4 py-3 text-base font-normal text-[#18342b] outline-none focus:border-[#1b8b6f]">
+            <option value="">Todos os tipos de cadastro ({dayEvents.length})</option>
+            {eventOptions.map((option) => <option key={option.kind} value={option.kind}>{option.icon} {option.label} ({dayEvents.filter((event) => event.kind === option.kind).length})</option>)}
+          </select>
+        </label>
       </section>
 
       <section className="mt-8">
