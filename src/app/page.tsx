@@ -568,7 +568,7 @@ function EventPicker({ onClose, onSelect }: { onClose: () => void; onSelect: (ki
   );
 }
 
-function ManagedSelect({ name, storageKey, defaults, placeholder, required = false }: { name: string; storageKey: string; defaults: string[]; placeholder: string; required?: boolean }) {
+function ManagedSelect({ name, storageKey, defaults, placeholder, required = false, onValueChange }: { name: string; storageKey: string; defaults: string[]; placeholder: string; required?: boolean; onValueChange?: (value: string) => void }) {
   const [options, setOptions] = useState(defaults);
   const [value, setValue] = useState("");
   const [managing, setManaging] = useState(false);
@@ -607,7 +607,20 @@ function ManagedSelect({ name, storageKey, defaults, placeholder, required = fal
     persist(options.filter((option) => option !== item)); if (value === item) setValue("");
   }
 
-  return <div className="mt-2"><div className="flex gap-2"><select name={name} required={required} value={value} onChange={(event) => setValue(event.target.value)} className="block min-w-0 flex-1 rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base"><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><button type="button" onClick={() => setManaging((open) => !open)} className="rounded-xl border border-[#b9cfc0] px-3 text-xs font-semibold text-[#39734f]">Gerenciar</button></div>{managing && <div className="mt-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><div className="flex gap-2"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Novo item" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div><div className="mt-3 space-y-2">{options.map((option) => <div key={option} className="flex items-center justify-between gap-2 text-sm"><span className="truncate">{option}</span><span className="flex gap-2"><button type="button" onClick={() => editItem(option)} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={() => deleteItem(option)} className="text-xs text-[#a34a3d]">Excluir</button></span></div>)}</div></div>}</div>;
+  return <div className="mt-2"><div className="flex gap-2"><select name={name} required={required} value={value} onChange={(event) => { setValue(event.target.value); onValueChange?.(event.target.value); }} className="block min-w-0 flex-1 rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base"><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><button type="button" onClick={() => setManaging((open) => !open)} className="rounded-xl border border-[#b9cfc0] px-3 text-xs font-semibold text-[#39734f]">Gerenciar</button></div>{managing && <div className="mt-2 rounded-2xl border border-[#dce5dd] bg-white p-3"><div className="flex gap-2"><input value={newItem} onChange={(event) => setNewItem(event.target.value)} placeholder="Novo item" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] px-2 py-2 text-sm" /><button type="button" onClick={addItem} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div><div className="mt-3 space-y-2">{options.map((option) => <div key={option} className="flex items-center justify-between gap-2 text-sm"><span className="truncate">{option}</span><span className="flex gap-2"><button type="button" onClick={() => editItem(option)} className="text-xs font-semibold text-[#39734f]">Editar</button><button type="button" onClick={() => deleteItem(option)} className="text-xs text-[#a34a3d]">Excluir</button></span></div>)}</div></div>}</div>;
+}
+
+function MealPresetSelect({ category, onSelect }: { category: string; onSelect: (value: string) => void }) {
+  const [presets, setPresets] = useState<Record<string, string[]>>({});
+  const [managing, setManaging] = useState(false);
+  const [newPreset, setNewPreset] = useState("");
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("meuintestino:meal-presets") || "{}"); if (saved && typeof saved === "object") setPresets(saved); } catch { /* usa lista vazia */ } }, []);
+  const options = category ? (presets[category] || []) : [];
+  function persist(next: Record<string, string[]>) { setPresets(next); localStorage.setItem("meuintestino:meal-presets", JSON.stringify(next)); }
+  function add() { const value = newPreset.trim(); if (!category || !value || options.includes(value)) return; persist({ ...presets, [category]: [...options, value] }); setNewPreset(""); }
+  function edit(item: string) { const value = window.prompt("Editar cardápio", item)?.trim(); if (!value || value === item || options.includes(value)) return; persist({ ...presets, [category]: options.map((current) => current === item ? value : current) }); }
+  function remove(item: string) { if (!window.confirm(`Excluir “${item}” deste cardápio?`)) return; persist({ ...presets, [category]: options.filter((current) => current !== item) }); }
+  return <div className="mt-3 rounded-2xl border border-[#dce5dd] bg-[#f7faf7] p-3"><p className="text-xs font-semibold text-[#527063]">Cardápio salvo {category ? `para ${category.toLowerCase()}` : "(selecione o tipo de refeição primeiro)"}</p>{category && options.length > 0 && <select defaultValue="" onChange={(event) => { if (event.target.value) onSelect(event.target.value); }} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-2.5 text-sm"><option value="">Escolher um cardápio salvo</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select>}{category && <button type="button" onClick={() => setManaging((open) => !open)} className="mt-2 text-xs font-semibold text-[#39734f]">{managing ? "Fechar cardápios" : "Cadastrar cardápio para este tipo"}</button>}{managing && <div className="mt-2 space-y-2"><div className="flex gap-2"><input value={newPreset} onChange={(event) => setNewPreset(event.target.value)} placeholder="Ex.: Arroz, feijão e frango" className="min-w-0 flex-1 rounded-lg border border-[#dce5dd] bg-white px-2 py-2 text-sm" /><button type="button" onClick={add} className="rounded-lg bg-[#e9f3eb] px-3 text-xs font-semibold text-[#39734f]">Adicionar</button></div>{options.map((option) => <div key={option} className="flex items-center justify-between gap-2 text-xs"><span className="truncate">{option}</span><span className="flex gap-2"><button type="button" onClick={() => edit(option)} className="font-semibold text-[#39734f]">Editar</button><button type="button" onClick={() => remove(option)} className="text-[#a34a3d]">Excluir</button></span></div>)}</div>}</div>;
 }
 
 function ManagedMultiSelect({ name, storageKey, defaults }: { name: string; storageKey: string; defaults: string[] }) {
@@ -681,6 +694,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [mealCategory, setMealCategory] = useState("");
+  const [mealDescription, setMealDescription] = useState("");
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -742,7 +757,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         </div>
         <p className="mt-3 rounded-xl bg-[#e9f3eb] px-3 py-2 text-xs font-normal text-[#527063]">O horário atual será registrado automaticamente.</p>
         {(kind === "meal" || kind === "exercise") && <label className="mt-4 block text-sm font-semibold">Categoria <span className="font-normal text-[#698076]">(opcional)</span>
-          <ManagedSelect name="category" storageKey={`${kind}-categories`} defaults={kind === "meal" ? ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"] : ["Caminhada", "Corrida", "Musculação"]} placeholder="Sem categoria" />
+          <ManagedSelect name="category" storageKey={`${kind}-categories`} defaults={kind === "meal" ? ["Café da manhã", "Almoço", "Lanche", "Jantar", "Ceia"] : ["Caminhada", "Corrida", "Musculação"]} placeholder="Sem categoria" onValueChange={kind === "meal" ? setMealCategory : undefined} />
         </label>}
         {kind === "urine" && <div className="mt-4 space-y-4"><label className="block text-sm font-semibold">Qualidade do jato
           <ManagedSelect name="streamQuality" storageKey="urine-stream-quality" defaults={["Normal", "Fraco", "Interrompido", "Muito forte"]} placeholder="Selecione a qualidade" required />
@@ -757,7 +772,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
           <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: dia mais intenso no trabalho" />
         </label></div>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
-          <textarea name="value" required placeholder="Ex.: arroz, feijão e abacate" className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+          <MealPresetSelect category={mealCategory} onSelect={setMealDescription} />
+          <textarea name="value" required value={mealDescription} onChange={(event) => setMealDescription(event.target.value)} placeholder="Ex.: arroz, feijão e abacate" className="mt-3 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">Tags para mapear o histórico <span className="font-normal text-[#698076]">(opcional)</span>
           <input name="tags" placeholder="Ex.: gordura, fibras, café (separe por vírgula)" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
