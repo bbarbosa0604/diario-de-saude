@@ -54,8 +54,16 @@ export default function ProfilePage() {
         setUser(account);
         setName(String(account.user_metadata?.full_name || ""));
         setBirthDate(String(account.user_metadata?.birth_date || ""));
-        setIntestinalHistory(String(account.user_metadata?.intestinal_history || ""));
         setBusy(false);
+        // O histórico intestinal vive em public.profiles, fora do user_metadata:
+        // o Supabase embute o metadata em todo access token, e um histórico
+        // longo ali estourava o limite de header do servidor (HTTP 431).
+        void supabase
+          .from("profiles")
+          .select("intestinal_history")
+          .eq("user_id", account.id)
+          .maybeSingle()
+          .then(({ data }) => setIntestinalHistory(String(data?.intestinal_history || "")));
         const storedPath = account.user_metadata?.avatar_path;
         if (storedPath) {
           setAvatarPath(storedPath);
@@ -100,8 +108,12 @@ export default function ProfilePage() {
       const { data: signed } = await supabase.storage.from("profile-photos").createSignedUrl(nextAvatarPath, 3600);
       if (signed?.signedUrl) setAvatarPreview(signed.signedUrl);
     }
-    const { data: updatedData, error: updateError } = await supabase.auth.updateUser({ data: { full_name: name.trim(), birth_date: birthDate || null, avatar_path: nextAvatarPath, intestinal_history: intestinalHistory.trim() } });
-    if (updateError) setError(updateError.message);
+    const { data: updatedData, error: updateError } = await supabase.auth.updateUser({ data: { full_name: name.trim(), birth_date: birthDate || null, avatar_path: nextAvatarPath } });
+    if (updateError) { setError(updateError.message); setBusy(false); return; }
+    // Fica fora do user_metadata (e portanto fora do access token) para não
+    // estourar o limite de header do servidor em textos longos.
+    const { error: profileError } = await supabase.from("profiles").upsert({ user_id: user.id, intestinal_history: intestinalHistory.trim() }, { onConflict: "user_id" });
+    if (profileError) setError(`Não foi possível salvar o histórico intestinal: ${profileError.message}`);
     else {
       // Confirma que o metadata atualizado foi incorporado à sessão persistida.
       const persistedPath = updatedData.user?.user_metadata?.avatar_path;

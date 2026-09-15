@@ -101,7 +101,9 @@ export async function POST(request: Request) {
     return jsonRpc(id, textResult({ documents, note: "Os links dos arquivos são temporários e expiram em 5 minutos." }));
   }
   if (name === "get_intestinal_history") {
-    const history = typeof auth.user.user_metadata?.intestinal_history === "string" ? auth.user.user_metadata.intestinal_history : "";
+    // Fica na tabela profiles, fora do user_metadata/JWT (ver supabase/schema.sql).
+    const { data: profileRow } = await auth.client.from("profiles").select("intestinal_history").eq("user_id", auth.user.id).maybeSingle();
+    const history = profileRow?.intestinal_history || "";
     return jsonRpc(id, textResult({ history: history || null, available: Boolean(history), note: "Este texto é um contexto pessoal informado pelo usuário e não representa diagnóstico médico." }));
   }
   if (name === "create_event") {

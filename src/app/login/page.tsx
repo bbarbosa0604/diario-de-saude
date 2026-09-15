@@ -33,12 +33,20 @@ export default function LoginPage() {
     setMessage(null);
     const result = mode === "signin"
       ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim(), intestinal_history: intestinalHistory.trim() } } });
+      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/verify?email=${encodeURIComponent(email)}`, data: { full_name: name.trim() } } });
     const nextParam = new URLSearchParams(window.location.search).get("next");
     const next = nextParam?.startsWith("/mcp/authorize") ? nextParam : "/";
     if (result.error) setError(result.error.message);
     else if (mode === "signup" && !result.data.session) setError("O cadastro foi criado, mas o Supabase ainda exige confirmação de e-mail. Desative Email Confirmations nas configurações do Supabase para liberar o acesso imediato.");
-    else router.replace(next);
+    else {
+      // Fica em public.profiles, fora do user_metadata/JWT (ver supabase/schema.sql).
+      // Só é possível gravar aqui com uma sessão já ativa (RLS por usuário).
+      const signupUserId = mode === "signup" ? result.data.user?.id : null;
+      if (signupUserId && intestinalHistory.trim()) {
+        await supabase.from("profiles").upsert({ user_id: signupUserId, intestinal_history: intestinalHistory.trim() }, { onConflict: "user_id" });
+      }
+      router.replace(next);
+    }
     setBusy(false);
   }
 

@@ -18,6 +18,10 @@ create table if not exists public.health_events (
 
 create index if not exists health_events_user_date_idx on public.health_events(user_id, event_date, event_time);
 
+-- O horário deixou de fazer parte do registro. Mantemos a coluna com valor neutro
+-- para preservar compatibilidade com registros já existentes.
+alter table public.health_events alter column event_time set default '00:00';
+
 alter table public.health_events drop constraint if exists health_events_event_kind_check;
 alter table public.health_events add constraint health_events_event_kind_check check (event_kind in ('meal', 'symptom', 'bowel', 'urine', 'stress', 'tea', 'medication', 'water', 'weight', 'sleep', 'exercise', 'note'));
 
@@ -151,3 +155,54 @@ using (bucket_id = 'medical-exams' and owner_id = (select auth.jwt()->>'sub'));
 drop policy if exists "Users can delete their own medical documents" on storage.objects;
 create policy "Users can delete their own medical documents" on storage.objects for delete to authenticated
 using (bucket_id = 'medical-exams' and owner_id = (select auth.jwt()->>'sub'));
+
+-- Contexto pessoal do usuário, fora de auth.users.raw_user_meta_data.
+-- O Supabase embute o user_metadata em todo access token, e o token viaja no
+-- header Authorization de cada chamada de API. Um histórico intestinal longo
+-- estourava o limite de header do servidor Node (~16 KB) e derrubava qualquer
+-- requisição com HTTP 431 antes mesmo de a rota executar.
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  intestinal_history text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+revoke all on table public.profiles from anon;
+grant select, insert, update on table public.profiles to authenticated;
+
+drop policy if exists "Users can view their own profile" on public.profiles;
+create policy "Users can view their own profile" on public.profiles for select to authenticated
+  using ((select auth.uid()) = user_id);
+drop policy if exists "Users can create their own profile" on public.profiles;
+create policy "Users can create their own profile" on public.profiles for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile" on public.profiles for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create or replace function public.set_profiles_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_updated_at on public.profiles;
+create trigger profiles_updated_at before update on public.profiles
+for each row execute function public.set_profiles_updated_at();
+
+-- Migração dos históricos que já estavam no metadata. Copia o texto para a
+-- tabela e então o remove do metadata, encolhendo os tokens já emitidos.
+insert into public.profiles (user_id, intestinal_history)
+select id, raw_user_meta_data->>'intestinal_history'
+from auth.users
+where coalesce(raw_user_meta_data->>'intestinal_history', '') <> ''
+on conflict (user_id) do update set intestinal_history = excluded.intestinal_history
+where public.profiles.intestinal_history = '';
+
+update auth.users
+set raw_user_meta_data = raw_user_meta_data - 'intestinal_history'
+where raw_user_meta_data ? 'intestinal_history';
