@@ -706,11 +706,6 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
     const value = String(form.get("value") || "").trim();
     const intensity = String(form.get("intensity") || "");
     const details = String(form.get("details") || "").trim();
-    const tags = String(form.get("tags") || "")
-      .split(",")
-      .map((tag) => tag.trim().toLowerCase())
-      .filter(Boolean)
-      .slice(0, 6);
     const category = String(form.get("category") || "").trim();
     const supplements = form.getAll("supplements").map(String).filter(Boolean);
     const supplementDetails = form.getAll("supplementDetails").map(String).filter(Boolean);
@@ -724,7 +719,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
     if (kind === "natural_treatment" && !treatmentType) return;
     const item: TimelineEvent =
       kind === "meal"
-        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? [...tags, "foto"] : tags, photoFile: photoFile ?? undefined }
+        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? ["foto"] : undefined, photoFile: photoFile ?? undefined }
         : kind === "bowel"
           ? { id: crypto.randomUUID(), kind, time, title: "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${details ? ` · ${details}` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
         : kind === "stress"
@@ -774,10 +769,6 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <MealPresetSelect category={mealCategory} onSelect={setMealDescription} />
           <textarea name="value" required value={mealDescription} onChange={(event) => setMealDescription(event.target.value)} placeholder="Ex.: arroz, feijão e abacate" className="mt-3 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
-        </label>}
-        {kind === "meal" && <label className="mt-4 block text-sm font-semibold">Tags para mapear o histórico <span className="font-normal text-[#698076]">(opcional)</span>
-          <input name="tags" placeholder="Ex.: gordura, fibras, café (separe por vírgula)" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
-          <span className="mt-1 block text-xs font-normal text-[#698076]">Use tags consistentes para comparar registros depois.</span>
         </label>}
         {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Tipo de chá
           <ManagedSelect name="value" storageKey="tea-types" defaults={["Camomila", "Hortelã", "Erva-doce", "Gengibre", "Verde", "Preto", "Outro"]} placeholder="Selecione o chá" />
