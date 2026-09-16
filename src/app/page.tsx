@@ -719,7 +719,7 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
     if (kind === "natural_treatment" && !treatmentType) return;
     const item: TimelineEvent =
       kind === "meal"
-        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${photoName ? " · foto anexada" : ""}`, tags: photoName ? ["foto"] : undefined, photoFile: photoFile ?? undefined }
+        ? { id: crypto.randomUUID(), kind, time, title: category || "Refeição", detail: `${value}${details ? ` · ${details}` : ""}${photoName ? " · foto anexada" : ""}`, tags: photoName ? ["foto"] : undefined, photoFile: photoFile ?? undefined }
         : kind === "bowel"
           ? { id: crypto.randomUUID(), kind, time, title: "Evacuação", detail: `Evacuação registrada${intensity ? ` · urgência ${intensity}/5` : ""}${details ? ` · ${details}` : ""}${photoName ? " · foto anexada" : ""}`, badge: photoName ? "IA" : undefined, tags: photoName ? ["foto", "classificação pendente"] : undefined, photoFile: photoFile ?? undefined }
         : kind === "stress"
@@ -769,6 +769,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "meal" && <label className="mt-4 block text-sm font-semibold">O que você comeu?
           <MealPresetSelect category={mealCategory} onSelect={setMealDescription} />
           <textarea name="value" required value={mealDescription} onChange={(event) => setMealDescription(event.target.value)} placeholder="Ex.: arroz, feijão e abacate" className="mt-3 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {kind === "meal" && <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span>
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: comi fora, senti desconforto depois" />
         </label>}
         {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Tipo de chá
           <ManagedSelect name="value" storageKey="tea-types" defaults={["Camomila", "Hortelã", "Erva-doce", "Gengibre", "Verde", "Preto", "Outro"]} placeholder="Selecione o chá" />
