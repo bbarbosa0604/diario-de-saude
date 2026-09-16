@@ -844,13 +844,33 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
 
 function EditEventForm({ event, onClose, onSave }: { event: TimelineEvent; onClose: () => void; onSave: (event: TimelineEvent) => void }) {
   const [title, setTitle] = useState(event.title);
+  const hasPhotoTag = event.detail.endsWith(" · foto anexada");
+  const withoutPhoto = hasPhotoTag ? event.detail.slice(0, -" · foto anexada".length) : event.detail;
+  const separatorIndex = withoutPhoto.indexOf(" · ");
+  const initialValue = event.kind === "meal" && separatorIndex !== -1 ? withoutPhoto.slice(0, separatorIndex) : withoutPhoto;
+  const initialDetails = event.kind === "meal" && separatorIndex !== -1 ? withoutPhoto.slice(separatorIndex + 3) : "";
+  const [value, setValue] = useState(initialValue);
+  const [details, setDetails] = useState(initialDetails);
   const [detail, setDetail] = useState(event.detail);
+
+  function submit(formEvent: FormEvent<HTMLFormElement>) {
+    formEvent.preventDefault();
+    const photoSuffix = hasPhotoTag ? " · foto anexada" : "";
+    const nextDetail = event.kind === "meal"
+      ? `${value.trim()}${details.trim() ? ` · ${details.trim()}` : ""}${photoSuffix}`
+      : detail.trim();
+    onSave({ ...event, title: title.trim() || event.title, detail: nextDetail });
+  }
+
   return <div className="fixed inset-0 z-20 flex items-end bg-[#18342b]/25" role="dialog" aria-modal="true" aria-label="Editar registro">
-    <form onSubmit={(formEvent) => { formEvent.preventDefault(); onSave({ ...event, title: title.trim() || event.title, detail: detail.trim() }); }} className="w-full rounded-t-[30px] bg-[#fcfcf9] px-5 pb-8 pt-4 shadow-2xl">
+    <form onSubmit={submit} className="w-full rounded-t-[30px] bg-[#fcfcf9] px-5 pb-8 pt-4 shadow-2xl">
       <div className="mx-auto h-1.5 w-10 rounded-full bg-[#d3ddd5]" />
       <div className="mt-5 flex items-center justify-between"><div><p className="text-sm text-[#698076]">Editar registro</p><h2 className="text-xl font-semibold">{event.title}</h2></div><button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-semibold text-[#527063]">Cancelar</button></div>
       <label className="mt-5 block text-sm font-semibold">Título<input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
-      <label className="mt-4 block text-sm font-semibold">Detalhes<textarea value={detail} onChange={(e) => setDetail(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+      {event.kind === "meal" ? <>
+        <label className="mt-4 block text-sm font-semibold">O que você comeu?<textarea value={value} onChange={(e) => setValue(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+        <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span><textarea value={details} onChange={(e) => setDetails(e.target.value)} className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: comi fora, senti desconforto depois" /></label>
+      </> : <label className="mt-4 block text-sm font-semibold">Detalhes<textarea value={detail} onChange={(e) => setDetail(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>}
       <button className="mt-6 w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">Salvar edição</button>
     </form>
   </div>;
