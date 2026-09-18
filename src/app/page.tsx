@@ -725,20 +725,20 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         : kind === "stress"
           ? { id: crypto.randomUUID(), kind, time, title: "Estresse", detail: `Nível ${intensity}/5${details ? ` · ${details}` : ""}`, badge: intensity ? `${intensity}/5` : undefined }
         : kind === "urine"
-          ? { id: crypto.randomUUID(), kind, time, title: "Urina", detail: `Jato: ${streamQuality || "não informado"} · Cor: ${urineColor || "não informada"} · Ardência: ${burning || "não informada"}` }
+          ? { id: crypto.randomUUID(), kind, time, title: "Urina", detail: `Jato: ${streamQuality || "não informado"} · Cor: ${urineColor || "não informada"} · Ardência: ${burning || "não informada"}${details ? ` · ${details}` : ""}` }
         : kind === "symptom"
             ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity ? `Intensidade ${intensity}/10` : ""}${details ? `${intensity ? " · " : ""}${details}` : ""}`, badge: intensity ? `${intensity}/10` : undefined }
             : kind === "sleep"
               ? { id: crypto.randomUUID(), kind, time, title: "Sono", detail: `${value} ${Number(value) === 1 ? "hora" : "horas"}${details ? ` · ${details}` : ""}` }
             : kind === "exercise"
-              ? { id: crypto.randomUUID(), kind, time, title: category || "Atividade", detail: `${value} ${Number(value) === 1 ? "minuto" : "minutos"}` }
+              ? { id: crypto.randomUUID(), kind, time, title: category || "Atividade", detail: `${value} ${Number(value) === 1 ? "minuto" : "minutos"}${details ? ` · ${details}` : ""}` }
             : kind === "tea"
-              ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity} ml` }
+              ? { id: crypto.randomUUID(), kind, time, title: value, detail: `${intensity} ml${details ? ` · ${details}` : ""}` }
               : kind === "medication"
-                ? { id: crypto.randomUUID(), kind, time, title: "Suplementação", detail: supplementDetails.join(", ") || supplements.join(", "), tags: supplements.map((supplement) => supplement.toLowerCase()) }
+                ? { id: crypto.randomUUID(), kind, time, title: "Suplementação", detail: `${supplementDetails.join(", ") || supplements.join(", ")}${details ? ` · ${details}` : ""}`, tags: supplements.map((supplement) => supplement.toLowerCase()) }
               : kind === "natural_treatment"
                 ? { id: crypto.randomUUID(), kind, time, title: treatmentType, detail: details || value || "Tratamento natural registrado" }
-            : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: value };
+            : { id: crypto.randomUUID(), kind, time, title: category || eventOptions.find((option) => option.kind === kind)?.label || "Evento", detail: `${value}${details ? ` · ${details}` : ""}` };
     onSave(item);
   }
 
@@ -760,6 +760,8 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
           <ManagedSelect name="urineColor" storageKey="urine-color" defaults={["Transparente", "Amarelo claro", "Amarelo escuro", "Âmbar", "Avermelhada", "Outra"]} placeholder="Selecione a cor" required />
         </label><label className="block text-sm font-semibold">Ardência ao urinar
           <ManagedSelect name="burning" storageKey="urine-burning" defaults={["Não", "Leve", "Moderada", "Intensa"]} placeholder="Selecione uma opção" required />
+        </label><label className="block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span>
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label></div>}
         {kind === "stress" && <div className="mt-4 space-y-4"><label className="block text-sm font-semibold">Nível de estresse (0 a 5)
           <input name="intensity" required type="number" min="0" max="5" defaultValue="0" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
@@ -779,6 +781,9 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "medication" && <label className="mt-4 block text-sm font-semibold">Seus suplementos
           <ManagedMultiSelect name="supplements" storageKey="supplements" defaults={["Probiótico", "Magnésio", "Vitamina D", "Ômega 3", "Glutamina", "Enzima digestiva"]} />
         </label>}
+        {kind === "medication" && <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span>
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: tomado com o café da manhã" />
+        </label>}
         {kind === "natural_treatment" && <div className="mt-4 space-y-4"><label className="block text-sm font-semibold">Tipo de tratamento
           <ManagedSelect name="treatmentType" storageKey="natural-treatments" defaults={["Escalda-pés", "Banho de tronco", "Banho de assento"]} placeholder="Selecione o tratamento" required />
         </label><label className="block text-sm font-semibold">Descrição
@@ -796,11 +801,20 @@ function QuickForm({ kind, onClose, onSave }: { kind: EventKind; onClose: () => 
         {kind === "exercise" && <label className="mt-4 block text-sm font-semibold">Tempo (minutos)
           <input name="value" required type="number" min="1" step="1" placeholder="Ex.: 30" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
+        {kind === "exercise" && <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span>
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
         {kind === "tea" && <label className="mt-4 block text-sm font-semibold">Quantidade (ml)
           <input name="intensity" required type="number" min="1" step="1" placeholder="Ex.: 250" className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {!['meal', 'bowel', 'urine', 'stress', 'symptom', 'tea', 'medication', 'natural_treatment', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Detalhes do registro
           <textarea name="value" required placeholder={eventOptions.find((option) => option.kind === kind)?.hint} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {(kind === "water" || kind === "weight" || kind === "tea") && <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span>
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
+        </label>}
+        {!['meal', 'bowel', 'urine', 'stress', 'symptom', 'tea', 'medication', 'natural_treatment', 'water', 'weight', 'sleep', 'exercise'].includes(kind) && <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span>
+          <textarea name="details" className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" />
         </label>}
         {(kind === "bowel" || kind === "meal") && <div className="mt-4 rounded-2xl border border-dashed border-[#b9cfc0] bg-[#f3f8f3] p-4">
           <p className="text-sm font-semibold">Foto {kind === "bowel" ? "da evacuação" : "da refeição"} <span className="font-normal text-[#698076]">(opcional)</span></p>
@@ -846,9 +860,10 @@ function EditEventForm({ event, onClose, onSave }: { event: TimelineEvent; onClo
   const [title, setTitle] = useState(event.title);
   const hasPhotoTag = event.detail.endsWith(" · foto anexada");
   const withoutPhoto = hasPhotoTag ? event.detail.slice(0, -" · foto anexada".length) : event.detail;
+  const hasDetailsField = event.kind === "meal" || event.kind === "medication";
   const separatorIndex = withoutPhoto.indexOf(" · ");
-  const initialValue = event.kind === "meal" && separatorIndex !== -1 ? withoutPhoto.slice(0, separatorIndex) : withoutPhoto;
-  const initialDetails = event.kind === "meal" && separatorIndex !== -1 ? withoutPhoto.slice(separatorIndex + 3) : "";
+  const initialValue = hasDetailsField && separatorIndex !== -1 ? withoutPhoto.slice(0, separatorIndex) : withoutPhoto;
+  const initialDetails = hasDetailsField && separatorIndex !== -1 ? withoutPhoto.slice(separatorIndex + 3) : "";
   const [value, setValue] = useState(initialValue);
   const [details, setDetails] = useState(initialDetails);
   const [detail, setDetail] = useState(event.detail);
@@ -856,7 +871,7 @@ function EditEventForm({ event, onClose, onSave }: { event: TimelineEvent; onClo
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
     const photoSuffix = hasPhotoTag ? " · foto anexada" : "";
-    const nextDetail = event.kind === "meal"
+    const nextDetail = hasDetailsField
       ? `${value.trim()}${details.trim() ? ` · ${details.trim()}` : ""}${photoSuffix}`
       : detail.trim();
     onSave({ ...event, title: title.trim() || event.title, detail: nextDetail });
@@ -867,9 +882,9 @@ function EditEventForm({ event, onClose, onSave }: { event: TimelineEvent; onClo
       <div className="mx-auto h-1.5 w-10 rounded-full bg-[#d3ddd5]" />
       <div className="mt-5 flex items-center justify-between"><div><p className="text-sm text-[#698076]">Editar registro</p><h2 className="text-xl font-semibold">{event.title}</h2></div><button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-semibold text-[#527063]">Cancelar</button></div>
       <label className="mt-5 block text-sm font-semibold">Título<input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 block w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
-      {event.kind === "meal" ? <>
-        <label className="mt-4 block text-sm font-semibold">O que você comeu?<textarea value={value} onChange={(e) => setValue(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
-        <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span><textarea value={details} onChange={(e) => setDetails(e.target.value)} className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder="Ex.: comi fora, senti desconforto depois" /></label>
+      {hasDetailsField ? <>
+        <label className="mt-4 block text-sm font-semibold">{event.kind === "meal" ? "O que você comeu?" : "Suplementos"}<textarea value={value} onChange={(e) => setValue(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>
+        <label className="mt-4 block text-sm font-semibold">Observação <span className="font-normal text-[#698076]">(opcional)</span><textarea value={details} onChange={(e) => setDetails(e.target.value)} className="mt-2 block min-h-20 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" placeholder={event.kind === "meal" ? "Ex.: comi fora, senti desconforto depois" : "Ex.: tomado com o café da manhã"} /></label>
       </> : <label className="mt-4 block text-sm font-semibold">Detalhes<textarea value={detail} onChange={(e) => setDetail(e.target.value)} className="mt-2 block min-h-24 w-full rounded-xl border border-[#dce5dd] bg-white px-3 py-3 text-base" /></label>}
       <button className="mt-6 w-full rounded-2xl bg-[#1e6341] py-4 font-semibold text-white">Salvar edição</button>
     </form>
